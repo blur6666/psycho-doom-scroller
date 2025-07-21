@@ -1,0 +1,14 @@
+{
+  "name": "glsl_hello_world",
+  "version": "1.0.0",
+  "description": "Minimal WebGL + GLSL shader demo",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js",
+    "start": "live-server dist"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "live-server": "^1.2.2"
+  }
+}
