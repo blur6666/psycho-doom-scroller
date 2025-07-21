@@ -1,3 +1,8 @@
 .vscode
 dist/
 shaders/AI/
+Thumbs.db
+.DS_Store
+*.log
+node_modules/
+*.tmp

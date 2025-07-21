@@ -1,0 +1,4 @@
+https://webgl2fundamentals.org/webgl/lessons/webgl-shaders-and-glsl.html
+https://www.khronos.org/opengl/wiki/Built-in_Variable_(GLSL)#Fragment_shader_inputs
+https://www.khronos.org/opengl/wiki/Built-in_Variable_(GLSL)#Vertex_shader_inputs
+https://thebookofshaders.com/02/

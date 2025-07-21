@@ -1,10 +1,25 @@
 const fs = require('fs');
 
-const vertex = fs.readFileSync('./shaders/vertex.glsl', 'utf8').replace(/`/g, '\`');
-const fragment = fs.readFileSync('./shaders/fragment.glsl', 'utf8').replace(/`/g, '\`');
-const webgl = fs.readFileSync('./static/webgl.js', 'utf8').replace(/`/g, '\`');
+function safeRead(file) {
+  try {
+    return fs.readFileSync(file, 'utf8').replace(/`/g, '\`');
+  } catch (e) {
+    console.error(`❌ Missing or unreadable file: ${file}`);
+    process.exit(1);
+  }
+}
 
-let template = fs.readFileSync('./index.template.html', 'utf8');
+const vertex = safeRead('./shaders/vertex.glsl');
+const fragment = safeRead('./shaders/fragment.glsl');
+const webgl = safeRead('./static/webgl.js');
+
+let template;
+try {
+  template = fs.readFileSync('./index.template.html', 'utf8');
+} catch (e) {
+  console.error('❌ Missing index.template.html');
+  process.exit(1);
+}
 template = template
   .replace('{{VERTEX_SHADER}}', vertex)
   .replace('{{FRAGMENT_SHADER}}', fragment)
@@ -14,6 +29,6 @@ fs.mkdirSync('./dist', { recursive: true });
 fs.writeFileSync('./dist/index.html', template);
 fs.cpSync('./static', './dist/static', { recursive: true });
 
-console.log('✅ HTML gerado em: dist/index.html');
+console.log('✅ HTML generated at: dist/index.html');
 
 
