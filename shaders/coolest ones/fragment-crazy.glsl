@@ -7,28 +7,29 @@ uniform vec2 u_resolution;
 
 void main() {
     float i = 0.0, d, z;
-    vec4 o = vec4(0.0), p, O, q;
-    vec2 C = gl_FragCoord.xy;
-    vec2 r = u_resolution.xy;
+    vec4 accum = vec4(0.0), p, color, temp;
+    vec2 fragCoord = gl_FragCoord.xy;
+    vec2 res = u_resolution.xy;
 
-    z = fract(dot(C, sin(C))) - 0.5;
+    z = fract(dot(fragCoord, sin(fragCoord))) - 0.5;
 
-    for (i = 0.0; i < 77.0; i++, z += 0.6 * d)
+    for (i = 0.0; i < 3.0; i++, z += 0.6 * d)
     {
-        p = vec4(z * normalize(vec3(C - 0.5 * r, r.y)), 0.1 * u_time);
+        p = vec4(z * normalize(vec3(fragCoord - 0.5 * res, res.y)), 0.1 * u_time);
         p.z += u_time;
-        O = p;
+        color = p;
 
-        p.xy *= mat2(cos(2.0 + O.z), -sin(2.0 + O.z), sin(2.0 + O.z), cos(2.0 + O.z));
+        p.xy *= mat2(cos(2.0 + color.z), -sin(2.0 + color.z), sin(2.0 + color.z), cos(2.0 + color.z));
 
-        O = (1.0 + sin(0.5 * O.z + length(p - O) + vec4(0, 4, 3, 6))) /
-            (0.5 + 2.0 * dot(O.xy, O.xy));
+        color = (1.0 + sin(0.5 * color.z + length(p - color) + vec4(0, 4, 3, 6))) /
+            (0.5 + 2.0 * dot(color.xy, color.xy));
 
         p = abs(fract(p) - 0.5);
         d = abs(min(length(p.xy) - 0.125, min(p.x, p.y) + 1e-3)) + 1e-3;
-        o += O.w / d * O;
+        accum += color.w / d * color;
     }
 
-    q = O = tanh(o / 2e4);
-    gl_FragColor = O;
+    temp = color = tanh(accum / 2e4);
+    if(any(isnan(O)) || any(isinf(O))) O = vec4(1,0,1,1);
+    gl_FragColor = color;
 }

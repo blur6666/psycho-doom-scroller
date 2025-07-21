@@ -2,7 +2,7 @@ const fs = require('fs');
 
 function safeRead(file) {
   try {
-    return fs.readFileSync(file, 'utf8').replace(/`/g, '`');
+    return fs.readFileSync(file, 'utf8');
   } catch (e) {
     console.error(`❌ Missing or unreadable file: ${file}`);
     process.exit(1);
