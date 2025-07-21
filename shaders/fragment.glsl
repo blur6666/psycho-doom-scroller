@@ -3,7 +3,7 @@ precision highp float;
 
 uniform vec2 u_resolution;
 uniform float u_time;
-// out vec4 gl_FragColor;
+out vec4 outColor;
 
 vec3 pallete(float t) {
     vec3 a = vec3(0.5f, 0.5f, 0.5f);
@@ -15,7 +15,10 @@ vec3 pallete(float t) {
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy*2.0f-u_resolution.xy)/u_resolution.y;
+    // Aspect-corrected UVs: maintain content aspect ratio
+    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+    uv = uv * 2.0 - 1.0;
+    uv.x *= u_resolution.x / u_resolution.y;
     vec2 uv0 = uv;
     vec3 finalColor = vec3(0.0f);
 
@@ -32,5 +35,5 @@ void main() {
         finalColor += color*d;
     }
 
-    gl_FragColor = vec4(finalColor, 1.0f);
+    outColor = vec4(finalColor, 1.0f);
 }
