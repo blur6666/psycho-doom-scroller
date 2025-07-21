@@ -2,7 +2,7 @@ const fs = require('fs');
 
 function safeRead(file) {
   try {
-    return fs.readFileSync(file, 'utf8').replace(/`/g, '\`');
+    return fs.readFileSync(file, 'utf8').replace(/`/g, '`');
   } catch (e) {
     console.error(`❌ Missing or unreadable file: ${file}`);
     process.exit(1);
@@ -15,9 +15,9 @@ const webgl = safeRead('./static/webgl.js');
 
 let template;
 try {
-  template = fs.readFileSync('./index.template.html', 'utf8');
+  template = fs.readFileSync('./static/index.template.html', 'utf8');
 } catch (e) {
-  console.error('❌ Missing index.template.html');
+  console.error('❌ Missing static/index.template.html');
   process.exit(1);
 }
 template = template

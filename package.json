@@ -5,6 +5,10 @@
   "main": "build.js",
   "scripts": {
     "build": "node build.js",
-    "start": "live-server dist"
-  }
+    "start": "npm run build && node server.js"
+  },
+  "devDependencies": {
+    "express": "^4.18.2"
+  },
+  "notes": "For local development, run: npm start and open http://localhost:8080/ in your browser."
 }
