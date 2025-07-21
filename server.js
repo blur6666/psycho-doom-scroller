@@ -20,6 +20,6 @@ app.use((req, res) => {
   res.status(404).send('Not found');
 });
 
-app.listen(PORT, () => {
-  console.log(`Dev server running at http://localhost:${PORT}`);
+app.listen(PORT, '127.0.0.2', () => {
+  console.log(`Dev server running at http://127.0.0.2:${PORT}`);
 });
