@@ -6,9 +6,5 @@
   "scripts": {
     "build": "node build.js",
     "start": "live-server dist"
-  },
-  "devDependencies": {
-    "eslint": "^8.0.0",
-    "live-server": "^1.2.2"
   }
 }
