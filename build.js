@@ -16,8 +16,8 @@ function normalizeShader(src) {
   // Remove BOM, trim whitespace, normalize line endings to LF
   return src.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
 }
-const vertex = normalizeShader(safeRead('./shaders/vertex.glsl'));
-const fragment = normalizeShader(safeRead('./shaders/fragment.glsl'));
+const vertex = normalizeShader(safeRead('./shaders/default.vert'));
+const fragment = normalizeShader(safeRead('./shaders/default.frag'));
 const webgl = safeRead('./static/webgl.js');
 
 // Write normalized shaders to debug files for comparison

@@ -26,7 +26,7 @@ app.get('/api/shaders/manifest', (req, res) => {
       const relPath = path.join(base, file);
       if (fs.statSync(fullPath).isDirectory()) {
         shaders = shaders.concat(collectShaders(fullPath, relPath));
-      } else if (file.endsWith('.frag') || file.endsWith('.glsl')) {
+      } else if (file.endsWith('.frag')) {
         shaders.push({
           id: relPath.replace(/\\/g, '/'),
           name: path.basename(file)

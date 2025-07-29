@@ -130,3 +130,12 @@ This document provides development information, plans, and task tracking for the
 4. **User Experience**
    - Prioritize immediate feedback and smooth navigation
    - Implement intuitive gesture and keyboard controls
+
+## Shader File Conventions
+
+To maintain a clear and consistent project structure, all shader files must adhere to the following naming conventions:
+
+-   **Fragment Shaders:** Must use the `.frag` extension. These are the shaders that will be displayed in the application and included in the shader manifest.
+-   **Vertex Shaders:** Must use the `.vert` extension. These are not included in the manifest and serve as supporting components.
+
+The primary default shaders are named `default.frag` and `default.vert`.
