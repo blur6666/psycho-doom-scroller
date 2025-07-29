@@ -212,6 +212,41 @@ async function fetchShaderSource(id) {
         showLoading(false);
     }
 }
+/**
+ * Non-blocking version: fetches a shader source by ID using promise chaining.
+ * @param {string} id - Shader ID from manifest
+ * @returns {Promise<string|null>} - Resolves to shader source or null on failure
+ */
+function fetchShaderSource(id) {
+    setTimeout(() => showLoading(true), 0); // Let UI update before fetch
+    let response;
+    return fetch(`/api/shaders/${encodeURIComponent(id)}`, { method: 'GET'})
+        .then(res => {
+            response = res;
+            if (!response.ok) {
+                throw new Error(`Failed to fetch shader ${id}: ${response.status} ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(source => {
+            if (!source) {
+                throw new Error(`Shader ${id} is empty or missing`);
+            }
+            console.info(`Loaded shader ${id} (${source.length} bytes)`);
+            return source;
+        })
+        .catch(error => {
+            if (response) {
+                console.error(`Error fetching shader ${id}: ${response.status} ${response.statusText}`, error);
+            } else {
+                console.error(`Error fetching shader ${id}:`, error);
+            }
+            return null;
+        })
+        .finally(() => {
+            showLoading(false);
+        });
+}
 
 /**
  * Creates and shows a notification to the user
@@ -858,7 +893,7 @@ function setupNavigationHandlers() {
         event.preventDefault();
         
         // Trigger transition regardless of scroll direction
-        throttleNavigation();
+        // throttleNavigation();
     }, { passive: false });
     
     // 2. Touch events - any touch triggers transition
@@ -892,7 +927,7 @@ function setupNavigationHandlers() {
     // 4. Mouse click navigation - any click triggers transition
     document.addEventListener('click', function(event) {
         // Any click triggers transition regardless of position
-        throttleNavigation();
+        // throttleNavigation();
     });
     
     // 5. Double tap for fullscreen on mobile
