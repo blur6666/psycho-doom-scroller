@@ -893,7 +893,7 @@ function setupNavigationHandlers() {
         event.preventDefault();
         
         // Trigger transition regardless of scroll direction
-        // throttleNavigation();
+        throttleNavigation();
     }, { passive: false });
     
     // 2. Touch events - any touch triggers transition
@@ -927,7 +927,7 @@ function setupNavigationHandlers() {
     // 4. Mouse click navigation - any click triggers transition
     document.addEventListener('click', function(event) {
         // Any click triggers transition regardless of position
-        // throttleNavigation();
+        throttleNavigation();
     });
     
     // 5. Double tap for fullscreen on mobile
