@@ -1,9 +1,10 @@
 #version 300 es
 precision mediump float;
 uniform vec2 u_resolution;
-uniform vec2 u_mouse;
+// uniform vec2 u_mouse;
 uniform float u_time;
 out vec4 fragColor;
+vec2 u_mouse = vec2(0.0, 0.0);
 
 vec2 time_warp(vec2 p, float time_speed) {
     float warp_factor = sin(length(p) * 5.0 - time_speed * 2.0) * 0.2;

@@ -1,7 +1,8 @@
 #version 300 es
 precision mediump float;
 uniform vec2 u_resolution;
-uniform vec2 u_mouse;
+// uniform vec2 u_mouse;
+vec2 u_mouse = vec2(0.0, 0.0);
 uniform float u_time;
 out vec4 fragColor;
 

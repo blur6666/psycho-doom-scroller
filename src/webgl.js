@@ -2,7 +2,7 @@
 let canvas, gl, program, animationFrameId;
 let aspectRatio = 1.0;
 let deviceOrientation = 'landscape';
-let mousePosition = [0.0, 0.0]; // Track mouse position for u_mouse uniform
+// let mousePosition = [0.0, 0.0]; // Track mouse position for u_mouse uniform
 let enableToasts = false;
 
 // Shader management
@@ -32,7 +32,7 @@ let uniformLocations = {
     time: null,
     aspectRatio: null,
     orientation: null,
-    mouse: null // Add mouse position uniform
+    // mouse: null // Add mouse position uniform
 };
 
 /**
@@ -46,7 +46,7 @@ function updateUniformLocations() {
     uniformLocations.time = gl.getUniformLocation(program, 'u_time');
     uniformLocations.aspectRatio = gl.getUniformLocation(program, 'u_aspectRatio');
     uniformLocations.orientation = gl.getUniformLocation(program, 'u_isLandscape');
-    uniformLocations.mouse = gl.getUniformLocation(program, 'u_mouse');
+    // uniformLocations.mouse = gl.getUniformLocation(program, 'u_mouse');
     
     console.log('Uniform locations updated for new shader');
 }
@@ -702,16 +702,23 @@ async function processShaderQueue() {
 }
 
 /**
- * Preloads the next N shaders by adding them to the compilation queue
- * @param {number} count - Optional number of shaders to preload, defaults to preloadCount
+ * Preloads shaders by adding them to the compilation queue
+ * @param {number} count - Number of shaders to preload
+ * @param {boolean} isInitialLoad - Whether this is the initial load (true) or user interaction (false)
  */
-function preloadNextShader(count = preloadCount) {
+function preloadShaders(count, isInitialLoad = false) {
     if (isLoading || isTransitioning || shaderManifest.length <= 1) {
         return;
     }
     
-    // Add the next N shaders to the compilation queue
-    queueShadersForCompilation(currentShaderIndex, count);
+    // For initial load, use the specified count (preloadCount)
+    // For user interactions, always use 1 to prevent performance stutters
+    const shadersToPreload = isInitialLoad ? count : 1;
+    
+    console.log(`Preloading ${shadersToPreload} shader(s), initial load: ${isInitialLoad}`);
+    
+    // Add shaders to the compilation queue
+    queueShadersForCompilation(currentShaderIndex, shadersToPreload);
 }
 
 /**
@@ -879,7 +886,7 @@ function setupNavigationHandlers() {
             // Any other key triggers transition
             throttleNavigation();
         }
-        event.preventDefault();
+        // event.preventDefault();
     });
     
     // 4. Mouse click navigation - any click triggers transition
@@ -1021,14 +1028,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // Add mouse move event listener to track mouse position
-    document.addEventListener('mousemove', function(event) {
-        // Convert mouse coordinates to normalized device coordinates (0.0 to 1.0)
-        const rect = canvas.getBoundingClientRect();
-        mousePosition[0] = (event.clientX - rect.left) / rect.width;
-        mousePosition[1] = 1.0 - (event.clientY - rect.top) / rect.height; // Invert Y to match WebGL coordinates
+    // document.addEventListener('mousemove', function(event) {
+    //     // Convert mouse coordinates to normalized device coordinates (0.0 to 1.0)
+    //     const rect = canvas.getBoundingClientRect();
+    //     mousePosition[0] = (event.clientX - rect.left) / rect.width;
+    //     mousePosition[1] = 1.0 - (event.clientY - rect.top) / rect.height; // Invert Y to match WebGL coordinates
         
-        // No need to update uniforms here - they'll be updated in the render loop
-    });
+    //     // No need to update uniforms here - they'll be updated in the render loop
+    // });
     
     // Add touch event listeners for mobile devices
     document.addEventListener('touchmove', function(event) {
@@ -1060,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function setStandardUniforms(prog, time) {
             if (!prog) return;
             
-            let resolutionLoc, timeLoc, aspectRatioLoc, orientationLoc, mouseLoc;
+            let resolutionLoc, timeLoc, aspectRatioLoc, orientationLoc; //mouseLoc
             
             // Use cached locations if this is the main program, otherwise look them up
             if (prog === program) {
@@ -1068,14 +1075,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 timeLoc = uniformLocations.time;
                 aspectRatioLoc = uniformLocations.aspectRatio;
                 orientationLoc = uniformLocations.orientation;
-                mouseLoc = uniformLocations.mouse;
+                // mouseLoc = uniformLocations.mouse;
             } else {
                 // For transition programs, look up the locations
                 resolutionLoc = gl.getUniformLocation(prog, 'u_resolution');
                 timeLoc = gl.getUniformLocation(prog, 'u_time');
                 aspectRatioLoc = gl.getUniformLocation(prog, 'u_aspectRatio');
                 orientationLoc = gl.getUniformLocation(prog, 'u_isLandscape');
-                mouseLoc = gl.getUniformLocation(prog, 'u_mouse');
+                // mouseLoc = gl.getUniformLocation(prog, 'u_mouse');
             }
         
         // Set standard uniforms if they exist
@@ -1097,9 +1104,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // Set mouse position uniform if it exists
-        if (mouseLoc) {
-            gl.uniform2f(mouseLoc, mousePosition[0], mousePosition[1]);
-        }
+        // if (mouseLoc) {
+        //     gl.uniform2f(mouseLoc, mousePosition[0], mousePosition[1]);
+        // }
         
         // Add transition progress uniform if it exists
         const progressLoc = prog === program
