@@ -11,7 +11,7 @@ let isLoading = false;
 // Transition state management
 let isTransitioning = false;
 let transitionStartTime = 0;
-let transitionDuration = 375; // transition duration in ms (2x faster than original 750ms)
+let transitionDuration = 300; // transition duration in ms (faster than previous 375ms)
 let transitionDirection = 1;  // 1 = next, -1 = previous
 let prevProgram = null;       // previous shader program during transition
 let nextProgram = null;       // next shader program during transition
@@ -528,9 +528,12 @@ async function startTransition(targetIndex, direction) {
 
 /**
  * Completes the current transition
+ * @param {boolean} force - Whether to force completion regardless of state
  */
-function completeTransition() {
-    if (!isTransitioning) return;
+function completeTransition(force = false) {
+    if (!isTransitioning && !force) return;
+    
+    console.log(`Completing transition to shader index: ${targetShaderIndex}`);
     
     // Delete the old program
     if (prevProgram) {
@@ -539,8 +542,10 @@ function completeTransition() {
     }
     
     // Update the current program to the next program
-    program = nextProgram;
-    nextProgram = null;
+    if (nextProgram) {
+        program = nextProgram;
+        nextProgram = null;
+    }
     
     // Update the current shader index to the target index
     currentShaderIndex = targetShaderIndex;
@@ -553,6 +558,9 @@ function completeTransition() {
     transitionProgress = 0;
     
     console.log(`Transition complete to shader index: ${currentShaderIndex}`);
+    
+    // Preload the next shader after a successful transition
+    setTimeout(preloadNextShader, 100);
 }
 
 /**
@@ -659,22 +667,62 @@ function setupNavigationHandlers() {
     // Throttle function to prevent too many navigation events
     function throttleNavigation(direction) {
         const now = performance.now();
+        
+        // If we're already transitioning, either ignore the event or force completion
+        if (isTransitioning) {
+            const elapsedTransition = now - transitionStartTime;
+            
+            // If we've been transitioning for too long, force complete it
+            if (elapsedTransition > transitionDuration * 1.5) {
+                console.log("Force completing stuck transition");
+                completeTransition(true);
+                // Still throttle the new request to avoid instant cascade
+                return false;
+            }
+            
+            // If transition is in progress but not stuck, ignore new navigation
+            console.log("Transition already in progress, ignoring new navigation");
+            return false;
+        }
+        
+        // Normal throttling based on time
         if (now - lastNavigationTime < navigationCooldown) {
             return false;
         }
         
         lastNavigationTime = now;
         
+        // TEMPORARY: Only allow transitions to the next shader
+        // Ignore any requests to go to the previous shader
         if (direction > 0) {
-            transitionToNextShader();
+            // Direction text for internal reference
+            const directionText = "next/down";
+            
+            // Transition to the next shader
+            const transitionStarted = transitionToNextShader();
+            
+            if (transitionStarted) {
+                console.log(`Started transition to next shader (${directionText})`);
+                
+                // Set a safety timeout to ensure transitions always complete
+                setTimeout(() => {
+                    if (isTransitioning) {
+                        console.log("Safety timeout: forcing transition completion");
+                        completeTransition(true);
+                    }
+                }, transitionDuration + 50); // Add slight buffer to normal duration
+                
+                return true;
+            } else {
+                console.log("Failed to start transition");
+                return false;
+            }
         } else {
-            transitionToPrevShader();
+            // Inform the user that transitions to previous shader are temporarily disabled
+            console.log("Transitions to previous shader temporarily disabled");
+            showNotification("Previous shader navigation temporarily disabled", "info", 1500);
+            return false;
         }
-        
-        // Preload the next shader after navigation
-        setTimeout(preloadNextShader, 100);
-        
-        return true;
     }
     
     // 1. Mouse wheel (scroll) navigation - optimized for desktop
@@ -684,7 +732,11 @@ function setupNavigationHandlers() {
         
         // More sensitive wheel handling with normalization
         const wheelDelta = Math.abs(event.deltaY);
-        const direction = event.deltaY > 0 ? 1 : -1;
+        
+        // In standard wheel events, positive deltaY means scrolling down
+        // But for our app, we want scrolling down to show the next shader down
+        // So we need to invert the direction
+        const direction = event.deltaY > 0 ? -1 : 1;
         
         // Apply different thresholds based on device
         if (!isMobile && wheelDelta < 10) {
@@ -721,8 +773,9 @@ function setupNavigationHandlers() {
         // Only trigger if vertical movement is more than horizontal
         // and more than threshold to avoid small accidental swipes
         if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > swipeThreshold) {
-            // Determine direction (deltaY < 0 is swipe up = next)
-            const direction = deltaY < 0 ? 1 : -1;
+            // Determine direction for swipe
+            // Swiping down (positive deltaY) should show the next shader
+            const direction = deltaY > 0 ? 1 : -1;
             throttleNavigation(direction);
         }
     }, { passive: true });
@@ -736,7 +789,7 @@ function setupNavigationHandlers() {
             case ' ':
             case 'j':
             case 's':
-                throttleNavigation(1); // Next (down)
+                throttleNavigation(1); // Move visually downward (next shader)
                 event.preventDefault();
                 break;
                 
@@ -744,7 +797,7 @@ function setupNavigationHandlers() {
             case 'PageUp':
             case 'k':
             case 'w':
-                throttleNavigation(-1); // Previous (up)
+                throttleNavigation(-1); // Move visually upward (previous shader)
                 event.preventDefault();
                 break;
                 
@@ -758,13 +811,15 @@ function setupNavigationHandlers() {
     
     // 4. Mouse click navigation
     document.addEventListener('click', function(event) {
-        // Determine direction based on click position (top half = up/previous, bottom half = down/next)
+        // Determine direction based on click position
+        // Click top half to move upward (previous shader)
+        // Click bottom half to move downward (next shader)
         const clickPosition = event.clientY / window.innerHeight;
         
         if (clickPosition < 0.5) {
-            throttleNavigation(-1); // Previous/up (clicked top half)
+            throttleNavigation(-1); // Move visually upward (previous shader)
         } else {
-            throttleNavigation(1);  // Next/down (clicked bottom half)
+            throttleNavigation(1);  // Move visually downward (next shader)
         }
     });
     
@@ -975,12 +1030,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             const elapsed = time - transitionStartTime;
             let rawProgress = Math.min(elapsed / transitionDuration, 1.0);
             
-            // Apply easing function to make transition snappier
-            // Using a power curve for faster start and end (x^1.5)
-            transitionProgress = Math.pow(rawProgress, 1.5);
+            // Apply easing function to make transition snappier but ensure completion
+            // Use a modified ease-in-out function that reaches 1.0 reliably
+            if (rawProgress < 0.5) {
+                // Accelerating phase (ease-in)
+                transitionProgress = 2.0 * rawProgress * rawProgress;
+            } else {
+                // Decelerating phase (ease-out)
+                const t = rawProgress - 0.5;
+                transitionProgress = 0.5 + (1.0 - Math.pow(1.0 - 2.0 * t, 2)) / 2.0;
+            }
             
-            // Ensure we hit 1.0 exactly at the end for clean completion
-            if (rawProgress >= 1.0) transitionProgress = 1.0;
+            // Force exact completion at the end to avoid floating point issues
+            if (rawProgress >= 0.99) transitionProgress = 1.0;
+            
+            // Debug output for transition progress
+            if (elapsed % 50 < 1) {  // Throttle logging
+                console.log(`Transition: ${(transitionProgress * 100).toFixed(1)}%, elapsed: ${elapsed}ms/${transitionDuration}ms`);
+            }
             
             // Enable alpha blending for smooth transitions
             gl.enable(gl.BLEND);
@@ -1093,9 +1160,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             gl.disable(gl.SCISSOR_TEST);
             gl.disable(gl.BLEND);
             
-            // Check if transition is complete
-            if (transitionProgress >= 1.0) {
+            // Check if transition is complete or nearly complete
+            if (transitionProgress >= 0.98) {
+                // Force completion to ensure we don't get stuck
+                transitionProgress = 1.0;
                 completeTransition();
+            }
+            
+            // Safeguard: set a timeout to force completion
+            if (!window.transitionSafetySet && isTransitioning) {
+                window.transitionSafetySet = true;
+                setTimeout(() => {
+                    window.transitionSafetySet = false;
+                    if (isTransitioning) {
+                        console.log("Safety timeout triggered: forcing transition completion");
+                        completeTransition(true);
+                    }
+                }, transitionDuration + 100);
             }
         } else if (program) {
             // Normal rendering (no transition)
