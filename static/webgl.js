@@ -11,7 +11,7 @@ let isLoading = false;
 // Transition state management
 let isTransitioning = false;
 let transitionStartTime = 0;
-let transitionDuration = 750; // transition duration in ms
+let transitionDuration = 375; // transition duration in ms (2x faster than original 750ms)
 let transitionDirection = 1;  // 1 = next, -1 = previous
 let prevProgram = null;       // previous shader program during transition
 let nextProgram = null;       // next shader program during transition
@@ -971,49 +971,127 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Handle transition animation
         if (isTransitioning && prevProgram && nextProgram) {
-            // Calculate transition progress (0.0 to 1.0)
+            // Calculate transition progress (0.0 to 1.0) with easing for snappier feel
             const elapsed = time - transitionStartTime;
-            transitionProgress = Math.min(elapsed / transitionDuration, 1.0);
+            let rawProgress = Math.min(elapsed / transitionDuration, 1.0);
             
-            // Apply transition based on direction
-            // For slide transition, we use scissor test to show part of each shader
-            gl.enable(gl.SCISSOR_TEST);
+            // Apply easing function to make transition snappier
+            // Using a power curve for faster start and end (x^1.5)
+            transitionProgress = Math.pow(rawProgress, 1.5);
             
-            // Calculate split position based on transition progress and direction
-            const splitPos = Math.floor(canvas.height * transitionProgress);
+            // Ensure we hit 1.0 exactly at the end for clean completion
+            if (rawProgress >= 1.0) transitionProgress = 1.0;
+            
+            // Enable alpha blending for smooth transitions
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            
+            // Calculate overlap area size (where both shaders are visible)
+            // Reduced to 40% of screen height for snappier transitions
+            const overlapHeight = canvas.height * 0.4;
+            
+            // Calculate the position of the dividing line based on progress
+            const dividerPos = canvas.height * transitionProgress;
             
             if (transitionDirection > 0) {
                 // Transitioning to next shader (slide up)
                 
-                // Draw current shader on bottom portion
-                gl.scissor(0, 0, canvas.width, canvas.height - splitPos);
+                // Draw previous shader (full screen, but will fade out at top)
                 gl.useProgram(prevProgram);
                 setStandardUniforms(prevProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                 
-                // Draw next shader on top portion
-                gl.scissor(0, canvas.height - splitPos, canvas.width, splitPos);
+                // Set up fade mask for transition area
+                // This draws a rectangle with transparent to opaque gradient
+                gl.enable(gl.SCISSOR_TEST);
+                
+                // Scissor zone covers the entire height
+                // Draw fewer strips for a faster, more immediate transition
+                const strips = 12; // Reduced number of strips for snappier gradient
+                
+                for (let i = 0; i < strips; i++) {
+                    // Calculate the position and height of this strip
+                    const stripHeight = overlapHeight / strips;
+                    const stripY = Math.max(0, dividerPos - overlapHeight) + (i * stripHeight);
+                    
+                    // Calculate opacity for this strip (0.0 to 1.0)
+                    const opacity = i / (strips - 1);
+                    
+                    // Set scissor to only draw in this thin horizontal strip
+                    gl.scissor(0, stripY, canvas.width, stripHeight);
+                    
+                    // Set the blend factor based on the strip's position
+                    gl.blendColor(0, 0, 0, opacity);
+                    gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+                    
+                    // Draw next shader in this strip with calculated opacity
+                    gl.useProgram(nextProgram);
+                    setStandardUniforms(nextProgram, time);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                }
+                
+                // Now draw the fully opaque portion of the next shader
+                // Reset blend mode
+                gl.blendFunc(gl.ONE, gl.ZERO);
+                
+                // Set scissor to only draw in the top portion (fully opaque)
+                const fullyVisibleHeight = Math.max(0, dividerPos);
+                gl.scissor(0, dividerPos, canvas.width, canvas.height - fullyVisibleHeight);
+                
+                // Draw next shader fully opaque in this region
                 gl.useProgram(nextProgram);
                 setStandardUniforms(nextProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             } else {
                 // Transitioning to previous shader (slide down)
                 
-                // Draw current shader on top portion
-                gl.scissor(0, splitPos, canvas.width, canvas.height - splitPos);
+                // Draw current shader (full screen, but will fade out at bottom)
                 gl.useProgram(prevProgram);
                 setStandardUniforms(prevProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                 
-                // Draw next shader on bottom portion
-                gl.scissor(0, 0, canvas.width, splitPos);
+                // Set up fade mask for transition area
+                gl.enable(gl.SCISSOR_TEST);
+                
+                // Draw fewer strips with decreasing opacity for snappier transitions
+                const strips = 12;
+                
+                for (let i = 0; i < strips; i++) {
+                    // Calculate the position and height of this strip
+                    const stripHeight = overlapHeight / strips;
+                    const stripY = Math.min(canvas.height - overlapHeight, dividerPos) + (i * stripHeight);
+                    
+                    // Calculate opacity for this strip (1.0 to 0.0)
+                    const opacity = 1.0 - (i / (strips - 1));
+                    
+                    // Set scissor to only draw in this thin horizontal strip
+                    gl.scissor(0, stripY, canvas.width, stripHeight);
+                    
+                    // Set the blend factor based on the strip's position
+                    gl.blendColor(0, 0, 0, opacity);
+                    gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+                    
+                    // Draw next shader in this strip with calculated opacity
+                    gl.useProgram(nextProgram);
+                    setStandardUniforms(nextProgram, time);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                }
+                
+                // Now draw the fully opaque portion of the next shader
+                gl.blendFunc(gl.ONE, gl.ZERO);
+                
+                // Set scissor to only draw in the bottom portion (fully opaque)
+                gl.scissor(0, 0, canvas.width, Math.min(canvas.height, dividerPos));
+                
+                // Draw next shader fully opaque in this region
                 gl.useProgram(nextProgram);
                 setStandardUniforms(nextProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
             
-            // Disable scissor test
+            // Disable scissor test and blending
             gl.disable(gl.SCISSOR_TEST);
+            gl.disable(gl.BLEND);
             
             // Check if transition is complete
             if (transitionProgress >= 1.0) {
