@@ -7,8 +7,8 @@ const path = require('path');
 
 const app = express();
 const PORT = 3000;
-const SHADERS_DIR = path.join(__dirname, 'shaders');
-const DIST_DIR = path.join(__dirname, 'dist');
+const SHADERS_DIR = path.join(__dirname, '../shaders');
+const DIST_DIR = path.join(__dirname, '../dist');
 
 // Serve static files from dist (for frontend)
 app.use(express.static(DIST_DIR));

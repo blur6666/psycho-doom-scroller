@@ -18,7 +18,7 @@ function normalizeShader(src) {
 }
 const vertex = normalizeShader(safeRead('./shaders/default.vert'));
 const fragment = normalizeShader(safeRead('./shaders/default.frag'));
-const webgl = safeRead('./static/webgl.js');
+const webgl = safeRead('./src/webgl.js');
 
 // Write normalized shaders to debug files for comparison
 fs.writeFileSync('./dist/vertex.normalized.glsl', vertex, 'utf8');
@@ -26,9 +26,9 @@ fs.writeFileSync('./dist/fragment.normalized.glsl', fragment, 'utf8');
 
 let template;
 try {
-  template = fs.readFileSync('./static/index.template.html', 'utf8');
+  template = fs.readFileSync('./src/index.template.html', 'utf8');
 } catch {
-  console.error('❌ Missing static/index.template.html');
+  console.error('❌ Missing src/index.template.html');
   process.exit(1);
 }
 template = template
@@ -38,7 +38,7 @@ template = template
 
 fs.mkdirSync('./dist', { recursive: true });
 fs.writeFileSync('./dist/index.html', template);
-fs.cpSync('./static', './dist/', { recursive: true });
+fs.cpSync('./src', './dist/', { recursive: true });
 
 console.log('✅ HTML generated at: dist/index.html');
 
