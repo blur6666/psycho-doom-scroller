@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shader Analysis</title>
+</head>
+<body>
+  <h1>Shader Analysis</h1>
+  <pre id="output"></pre>
+  <script>
+    async function loadShaderSource(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to load shader: ${url}`);
+      }
+      return await response.text();
+    }
+
+    function compileShader(gl, source, type) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+
+      const startTime = performance.now();
+      gl.compileShader(shader);
+      gl.getError(); // Force WebGL to process commands
+      const endTime = performance.now();
+
+      console.log('Start time:', startTime, 'End time:', endTime, 'Duration:', endTime - startTime);
+
+      // Ensure the shader compilation status is checked
+      let compileSuccess = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+      console.log('Shader compilation status:', compileSuccess);
+      if (!compileSuccess) {
+        const error = gl.getShaderInfoLog(shader);
+        gl.deleteShader(shader);
+        throw new Error(`Shader compilation failed: ${error}`);
+      }
+      return endTime - startTime; // Compilation time in milliseconds
+    }
+
+    async function analyzeShader(url) {
+      const output = document.getElementById('output');
+      output.textContent += `Analyzing shader: ${url}\n`;
+
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        throw new Error('WebGL 2.0 is not supported in this browser.');
+      }
+      if (!gl) {
+        throw new Error('WebGL not supported in this browser.');
+      }
+
+      try {
+        const source = await loadShaderSource(url);
+        const compileTime = compileShader(gl, source, gl.FRAGMENT_SHADER);
+        output.textContent += `Compilation time: ${compileTime.toFixed(2)} ms\n`;
+      } catch (error) {
+        output.textContent += `Error: ${error.message}\n`;
+      }
+    }
+
+    async function analyzeShaders() {
+      const shaderUrls = [
+        '../shaders/fragment.glsl',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_01.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_02.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_03.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_04.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_05.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_06.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_07.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721105911_08.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721110329_03.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721110329_14.frag',
+        '../shaders/coolest-ones/KaleidoscopicFilaments_20250721110329_15.frag'
+      ];
+
+      for (const url of shaderUrls) {
+        await analyzeShader(url);
+      }
+    }
+
+    analyzeShaders();
+  </script>
+</body>
+</html>

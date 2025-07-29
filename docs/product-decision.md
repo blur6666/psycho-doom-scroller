@@ -16,7 +16,18 @@ This document records key decisions made during the development of Psychodoom Sc
    - Only translation/scroll (slide) transitions will be implemented for shader changes. No fade or other effects in MVP.
 
 4. **Gestures**
-   - Only two gestures are supported: scroll up (next shader) and scroll down (previous shader). No other gestures will be implemented in the MVP or foreseeable future.
+   - Only two gestures are supported: scroll down (next shader) and scroll up (previous shader). This follows standard scrolling conventions for both mobile and desktop. No other gestures will be implemented in the MVP or foreseeable future.
+
+5. **Runtime Shader Compilation Strategy**
+   - We will test runtime shader compilation with the current shader folder structure to determine viability
+   - Keep current /shaders/ folder organization for MVP - mixed extensions (.frag/.glsl) and complex filenames are acceptable
+   - Load shaders randomly from folder initially, without database or complex relationships
+   - Performance analysis needed to determine if shaders need simplification or pre-processing
+
+6. **Error Handling Philosophy**
+   - No fallback shaders for compilation/compatibility errors - if it breaks, user gets nothing (expected behavior)
+   - All target browsers implement WebGL, so compatibility should be default
+   - Network failures should fail gracefully but no retry mechanisms needed for MVP
 
 ---
 
