@@ -3,6 +3,7 @@ let canvas, gl, program, animationFrameId;
 let aspectRatio = 1.0;
 let deviceOrientation = 'landscape';
 let mousePosition = [0.0, 0.0]; // Track mouse position for u_mouse uniform
+let enableToasts = false;
 
 // Shader management
 let currentShaderIndex = 0;
@@ -203,6 +204,14 @@ async function fetchShaderSource(id) {
  * @param {number} duration - How long to show notification in ms (0 for permanent)
  */
 function showNotification(message, type = 'info', duration = 3000) {
+    if (!enableToasts) {
+        if (type === 'error') {
+            console.error(message);
+        } else {
+            console.log(message);
+        }
+        return;
+    }
     // Remove any existing notification
     const existingNotification = document.getElementById('notification');
     if (existingNotification) {
