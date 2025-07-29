@@ -16,6 +16,7 @@ let transitionDirection = 1;  // 1 = next, -1 = previous
 let prevProgram = null;       // previous shader program during transition
 let nextProgram = null;       // next shader program during transition
 let transitionProgress = 0;   // 0.0 to 1.0
+let targetShaderIndex = 0;    // target shader index for the current transition
 
 // Cache for uniform locations to avoid redundant lookups
 let uniformLocations = {
@@ -322,11 +323,11 @@ function showNavigationHints() {
     // Create navigation hints
     const topHint = document.createElement('div');
     topHint.className = 'nav-hint top';
-    topHint.textContent = 'Swipe/scroll up or click top half to see previous shader';
+    topHint.textContent = 'Swipe/scroll up or click top half to see previous shader (up)';
     
     const bottomHint = document.createElement('div');
     bottomHint.className = 'nav-hint bottom';
-    bottomHint.textContent = 'Swipe/scroll down or click bottom half to see next shader';
+    bottomHint.textContent = 'Swipe/scroll down or click bottom half to see next shader (down)';
     
     // Add to DOM
     document.body.appendChild(topHint);
@@ -443,7 +444,7 @@ async function loadShaderByIndex(index, forTransition = false) {
 }
 
 /**
- * Transitions to the next shader
+ * Transitions to the next shader (down)
  * @returns {Promise<boolean>} - Whether transition was started successfully
  */
 async function transitionToNextShader() {
@@ -459,7 +460,7 @@ async function transitionToNextShader() {
 }
 
 /**
- * Transitions to the previous shader
+ * Transitions to the previous shader (up)
  * @returns {Promise<boolean>} - Whether transition was started successfully
  */
 async function transitionToPrevShader() {
@@ -492,6 +493,9 @@ async function startTransition(targetIndex, direction) {
     try {
         // Store the current program as the previous program for the transition
         prevProgram = program;
+        
+        // Store the target shader index
+        targetShaderIndex = targetIndex;
         
         // Load the target shader for transition
         nextProgram = await loadShaderByIndex(targetIndex, true);
@@ -537,6 +541,9 @@ function completeTransition() {
     // Update the current program to the next program
     program = nextProgram;
     nextProgram = null;
+    
+    // Update the current shader index to the target index
+    currentShaderIndex = targetShaderIndex;
     
     // Update uniform locations for the new program
     updateUniformLocations();
@@ -729,7 +736,7 @@ function setupNavigationHandlers() {
             case ' ':
             case 'j':
             case 's':
-                throttleNavigation(1); // Next
+                throttleNavigation(1); // Next (down)
                 event.preventDefault();
                 break;
                 
@@ -737,7 +744,7 @@ function setupNavigationHandlers() {
             case 'PageUp':
             case 'k':
             case 'w':
-                throttleNavigation(-1); // Previous
+                throttleNavigation(-1); // Previous (up)
                 event.preventDefault();
                 break;
                 
@@ -751,13 +758,13 @@ function setupNavigationHandlers() {
     
     // 4. Mouse click navigation
     document.addEventListener('click', function(event) {
-        // Determine direction based on click position (top half = up, bottom half = down)
+        // Determine direction based on click position (top half = up/previous, bottom half = down/next)
         const clickPosition = event.clientY / window.innerHeight;
         
         if (clickPosition < 0.5) {
-            throttleNavigation(-1); // Previous (clicked top half)
+            throttleNavigation(-1); // Previous/up (clicked top half)
         } else {
-            throttleNavigation(1);  // Next (clicked bottom half)
+            throttleNavigation(1);  // Next/down (clicked bottom half)
         }
     });
     
@@ -973,33 +980,33 @@ document.addEventListener('DOMContentLoaded', async function() {
             gl.enable(gl.SCISSOR_TEST);
             
             // Calculate split position based on transition progress and direction
-            const splitPos = Math.floor(canvas.width * transitionProgress);
+            const splitPos = Math.floor(canvas.height * transitionProgress);
             
             if (transitionDirection > 0) {
-                // Transitioning to next shader (slide left)
+                // Transitioning to next shader (slide up)
                 
-                // Draw current shader on left portion
-                gl.scissor(0, 0, canvas.width - splitPos, canvas.height);
+                // Draw current shader on bottom portion
+                gl.scissor(0, 0, canvas.width, canvas.height - splitPos);
                 gl.useProgram(prevProgram);
                 setStandardUniforms(prevProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                 
-                // Draw next shader on right portion
-                gl.scissor(canvas.width - splitPos, 0, splitPos, canvas.height);
+                // Draw next shader on top portion
+                gl.scissor(0, canvas.height - splitPos, canvas.width, splitPos);
                 gl.useProgram(nextProgram);
                 setStandardUniforms(nextProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             } else {
-                // Transitioning to previous shader (slide right)
+                // Transitioning to previous shader (slide down)
                 
-                // Draw current shader on right portion
-                gl.scissor(splitPos, 0, canvas.width - splitPos, canvas.height);
+                // Draw current shader on top portion
+                gl.scissor(0, splitPos, canvas.width, canvas.height - splitPos);
                 gl.useProgram(prevProgram);
                 setStandardUniforms(prevProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                 
-                // Draw next shader on left portion
-                gl.scissor(0, 0, splitPos, canvas.height);
+                // Draw next shader on bottom portion
+                gl.scissor(0, 0, canvas.width, splitPos);
                 gl.useProgram(nextProgram);
                 setStandardUniforms(nextProgram, time);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
