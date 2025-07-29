@@ -251,10 +251,24 @@ async function fetchShaderSource(id) {
     return await res.text();
 }
 
-export default { 
-    fetchShaderSource: fetchShaderSource, 
+// Expose utilities to both module and non-module environments
+const WebGLUtils = {
+    fetchShaderSource: fetchShaderSource,
     fetchShaderManifest: fetchShaderManifest,
     createProgramFromScripts: createProgramFromScripts,
     createProgramFromSources: createProgramFromSources,
     resizeCanvasToDisplaySize: resizeCanvasToDisplaySize,
+    loadShader: loadShader,
+    createProgram: createProgram,
+    error: error
 };
+
+// Export for ES modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = WebGLUtils;
+} else if (typeof define === 'function' && define.amd) {
+    define([], function() { return WebGLUtils; });
+} else {
+    // Expose to global scope for traditional script loading
+    window.WebGLUtils = WebGLUtils;
+}

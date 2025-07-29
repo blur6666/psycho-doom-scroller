@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLSL Shader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PsychoDoom Shader Scroller</title>
     <link rel="stylesheet" href="./style.css">
+    <!-- Default vertex shader -->
     <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
 precision highp float;
 
@@ -14,11 +15,16 @@ void main() {
     gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
 }
 </script>
+    <!-- Default fragment shader with enhanced uniform support -->
     <script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
 precision highp float;
 
-uniform vec2 u_resolution;
-uniform float u_time;
+// Standard uniforms
+uniform vec2 u_resolution;  // Canvas resolution (width, height)
+uniform float u_time;       // Time in seconds
+uniform float u_aspectRatio; // Aspect ratio (width / height)
+uniform int u_isLandscape;  // 1 if landscape, 0 if portrait
+
 out vec4 outColor;
 
 vec3 palette(float t) {
@@ -31,10 +37,13 @@ vec3 palette(float t) {
 }
 
 void main() {
-    // Aspect-corrected UVs: maintain content aspect ratio
+    // Better aspect ratio handling
     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
     uv = uv * 2.0 - 1.0;
-    uv.x *= u_resolution.x / u_resolution.y;
+    
+    // Use the aspect ratio uniform for consistent sizing
+    uv.x *= u_aspectRatio;
+    
     vec2 uv0 = uv;
     vec3 finalColor = vec3(0.0);
 
@@ -55,7 +64,8 @@ void main() {
 }</script>
 </head>
 <body>
-    <canvas id="glsl-canvas" width="500" height="500"></canvas>
-    <script src="./webgl.js?v=1"></script>
+    <!-- Canvas is now created dynamically in webgl.js -->
+    <script src="./webgl-utils.js"></script>
+    <script src="./webgl.js?v=2"></script>
 </body>
 </html>
