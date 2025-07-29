@@ -2,6 +2,7 @@
 let canvas, gl, program, animationFrameId;
 let aspectRatio = 1.0;
 let deviceOrientation = 'landscape';
+let mousePosition = [0.0, 0.0]; // Track mouse position for u_mouse uniform
 
 // Shader management
 let currentShaderIndex = 0;
@@ -23,7 +24,8 @@ let uniformLocations = {
     resolution: null,
     time: null,
     aspectRatio: null,
-    orientation: null
+    orientation: null,
+    mouse: null // Add mouse position uniform
 };
 
 /**
@@ -37,6 +39,7 @@ function updateUniformLocations() {
     uniformLocations.time = gl.getUniformLocation(program, 'u_time');
     uniformLocations.aspectRatio = gl.getUniformLocation(program, 'u_aspectRatio');
     uniformLocations.orientation = gl.getUniformLocation(program, 'u_isLandscape');
+    uniformLocations.mouse = gl.getUniformLocation(program, 'u_mouse');
     
     console.log('Uniform locations updated for new shader');
 }
@@ -949,6 +952,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.addEventListener('fullscreenchange', handleResize);
     }
     
+    // Add mouse move event listener to track mouse position
+    document.addEventListener('mousemove', function(event) {
+        // Convert mouse coordinates to normalized device coordinates (0.0 to 1.0)
+        const rect = canvas.getBoundingClientRect();
+        mousePosition[0] = (event.clientX - rect.left) / rect.width;
+        mousePosition[1] = 1.0 - (event.clientY - rect.top) / rect.height; // Invert Y to match WebGL coordinates
+        
+        // No need to update uniforms here - they'll be updated in the render loop
+    });
+    
+    // Add touch event listeners for mobile devices
+    document.addEventListener('touchmove', function(event) {
+        if (event.touches.length > 0) {
+            // Prevent default to avoid scrolling while interacting with shader
+            // event.preventDefault();
+            
+            // Convert touch coordinates to normalized device coordinates (0.0 to 1.0)
+            const rect = canvas.getBoundingClientRect();
+            const touch = event.touches[0];
+            mousePosition[0] = (touch.clientX - rect.left) / rect.width;
+            mousePosition[1] = 1.0 - (touch.clientY - rect.top) / rect.height; // Invert Y to match WebGL coordinates
+        }
+    }, { passive: true });
+    
     // Get uniform locations
     const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
     const timeLocation = gl.getUniformLocation(program, 'u_time');
@@ -963,23 +990,25 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @param {number} time - Current time in milliseconds
      */
     function setStandardUniforms(prog, time) {
-        if (!prog) return;
-        
-        let resolutionLoc, timeLoc, aspectRatioLoc, orientationLoc;
-        
-        // Use cached locations if this is the main program, otherwise look them up
-        if (prog === program) {
-            resolutionLoc = uniformLocations.resolution;
-            timeLoc = uniformLocations.time;
-            aspectRatioLoc = uniformLocations.aspectRatio;
-            orientationLoc = uniformLocations.orientation;
-        } else {
-            // For transition programs, look up the locations
-            resolutionLoc = gl.getUniformLocation(prog, 'u_resolution');
-            timeLoc = gl.getUniformLocation(prog, 'u_time');
-            aspectRatioLoc = gl.getUniformLocation(prog, 'u_aspectRatio');
-            orientationLoc = gl.getUniformLocation(prog, 'u_isLandscape');
-        }
+            if (!prog) return;
+            
+            let resolutionLoc, timeLoc, aspectRatioLoc, orientationLoc, mouseLoc;
+            
+            // Use cached locations if this is the main program, otherwise look them up
+            if (prog === program) {
+                resolutionLoc = uniformLocations.resolution;
+                timeLoc = uniformLocations.time;
+                aspectRatioLoc = uniformLocations.aspectRatio;
+                orientationLoc = uniformLocations.orientation;
+                mouseLoc = uniformLocations.mouse;
+            } else {
+                // For transition programs, look up the locations
+                resolutionLoc = gl.getUniformLocation(prog, 'u_resolution');
+                timeLoc = gl.getUniformLocation(prog, 'u_time');
+                aspectRatioLoc = gl.getUniformLocation(prog, 'u_aspectRatio');
+                orientationLoc = gl.getUniformLocation(prog, 'u_isLandscape');
+                mouseLoc = gl.getUniformLocation(prog, 'u_mouse');
+            }
         
         // Set standard uniforms if they exist
         if (resolutionLoc) {
@@ -997,6 +1026,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         if (orientationLoc) {
             gl.uniform1i(orientationLoc, deviceOrientation === 'landscape' ? 1 : 0);
+        }
+        
+        // Set mouse position uniform if it exists
+        if (mouseLoc) {
+            gl.uniform2f(mouseLoc, mousePosition[0], mousePosition[1]);
         }
         
         // Add transition progress uniform if it exists
