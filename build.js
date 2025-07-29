@@ -12,9 +12,17 @@ function safeRead(file) {
   }
 }
 
-const vertex = safeRead('./shaders/vertex.glsl');
-const fragment = safeRead('./shaders/fragment.glsl');
+function normalizeShader(src) {
+  // Remove BOM, trim whitespace, normalize line endings to LF
+  return src.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+}
+const vertex = normalizeShader(safeRead('./shaders/vertex.glsl'));
+const fragment = normalizeShader(safeRead('./shaders/fragment.glsl'));
 const webgl = safeRead('./static/webgl.js');
+
+// Write normalized shaders to debug files for comparison
+fs.writeFileSync('./dist/vertex.normalized.glsl', vertex, 'utf8');
+fs.writeFileSync('./dist/fragment.normalized.glsl', fragment, 'utf8');
 
 let template;
 try {

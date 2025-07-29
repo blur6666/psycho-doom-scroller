@@ -1,36 +1,99 @@
-import webglUtils from './webgl-utils.js';
+// Minimal working WebGL implementation - no dependencies, no imports
+let canvas, gl, program, animationFrameId;
 
-let canvas, gl, vsSource, fsSource, program, currentIndex, manifest, animationFrameId;
+// Shader compilation functions
+function createShader(gl, source, type) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
 
-(async function init() {
+function createProgram(gl, vertexShader, fragmentShader) {
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Program link error:', gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+        return null;
+    }
+    return program;
+}
+
+function resizeCanvasToDisplaySize(canvas) {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        return true;
+    }
+    return false;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Starting WebGL application');
+    
     canvas = document.getElementById('glsl-canvas');
-    gl = canvas.getContext("webgl2");
-    if (!gl)
-        console.error("failed to load canvas or webgl2");
-        
-    animationFrameId = null;
-    currentIndex = 0;
-    manifest = await webglUtils.fetchShaderManifest();
-    vsSource = document.getElementById('vertex-shader').textContent;   // Vertex shader source from static HTML
-    fsSource = document.getElementById('fragment-shader').textContent;
-    //fsSource = await webglUtils.fetchShaderSource('fragment.glsl');               // default startup shader
+    if (!canvas) {
+        console.error('Canvas not found');
+        return;
+    }
     
-    // Remove any previous fragment shader script tag
-    const oldFrag = document.getElementById('fragment-shader');
-    if (oldFrag) oldFrag.remove();
-
-    const fragScript = document.createElement('script');
-    fragScript.id = 'fragment-shader';
-    fragScript.type = 'x-shader/x-fragment';
-    fragScript.textContent = fsSource;
-    document.head.appendChild(fragScript);
-
-    // START THIS SHIT
-    program = webglUtils.createProgramFromScripts(gl, ['vertex-shader', 'fragment-shader']);
+    gl = canvas.getContext('webgl2');
+    if (!gl) {
+        console.error('WebGL2 not supported');
+        return;
+    }
+    
+    console.log('WebGL2 context created');
+    
+    // Get shaders from script tags
+    const vsSource = document.getElementById('vertex-shader')?.textContent;
+    const fsSource = document.getElementById('fragment-shader')?.textContent;
+    
+    if (!vsSource || !fsSource) {
+        console.error('Shader sources not found');
+        console.log('Available script tags:', document.querySelectorAll('script').length);
+        return;
+    }
+    
+    console.log('Shaders found, compiling...');
+    console.log('Vertex shader length:', vsSource.length, 'snippet:', vsSource.slice(0, 100));
+    console.log('Fragment shader length:', fsSource.length, 'snippet:', fsSource.slice(0, 100));
+    
+    // Compile shaders
+    const vertexShader = createShader(gl, vsSource, gl.VERTEX_SHADER);
+    const fragmentShader = createShader(gl, fsSource, gl.FRAGMENT_SHADER);
+    
+    if (!vertexShader || !fragmentShader) {
+        console.error('Shader compilation failed');
+        return;
+    }
+    
+    console.log('Shaders compiled successfully');
+    
+    // Create program
+    program = createProgram(gl, vertexShader, fragmentShader);
+    if (!program) {
+        console.error('Program creation failed');
+        return;
+    }
+    
+    console.log('Program created successfully');
+    
     gl.useProgram(program);
-
     
-    // Set up a simple buffer for a fullscreen quad
+    // Set up vertex buffer
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     const positions = [
@@ -40,30 +103,63 @@ let canvas, gl, vsSource, fsSource, program, currentIndex, manifest, animationFr
          1.0,  1.0
     ];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-    const positionLocation = gl.getAttribLocation(program, "aVertexPosition");
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    webglUtils.resizeCanvasToDisplaySize(canvas);
-    render();
+    
+    // Set up attributes
+    const positionLocation = gl.getAttribLocation(program, 'aVertexPosition');
+    console.log('Position attribute location:', positionLocation);
+    if (positionLocation >= 0) {
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    }
+    
+    // Set canvas size
+    canvas.width = 500;
+    canvas.height = 500;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    
+    // Get uniform locations
+    const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
+    const timeLocation = gl.getUniformLocation(program, 'u_time');
+    console.log('u_resolution location:', resolutionLocation);
+    console.log('u_time location:', timeLocation);
+    
+    console.log('Starting render loop');
     
     function render(time) {
+        resizeCanvasToDisplaySize(canvas);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
-
+        
         gl.useProgram(program);
-        const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+        
+        // Set uniforms
         if (resolutionLocation) {
             gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
         }
-        const timeLocation = gl.getUniformLocation(program, "u_time");
+        
         if (timeLocation) {
             gl.uniform1f(timeLocation, (time || performance.now()) / 1000.0);
         }
+        
+        // Draw
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        requestAnimationFrame(render);
+
+        // Log WebGL errors if any
+        const err = gl.getError();
+        if (err !== gl.NO_ERROR) {
+            console.error('WebGL error after drawArrays:', err);
+        }
+
+        // Log program info log (should be empty if OK)
+        const programInfoLog = gl.getProgramInfoLog(program);
+        if (programInfoLog) {
+            console.warn('Program info log:', programInfoLog);
+        }
+
+        animationFrameId = requestAnimationFrame(render);
     }
-})();
-
-
+    
+    render();
+});

@@ -151,9 +151,11 @@ function createShaderFromScript(
             shaderType = gl.VERTEX_SHADER;
         } else if (shaderScript.type === "x-shader/x-fragment") {
             shaderType = gl.FRAGMENT_SHADER;
-        } else if (shaderType !== gl.VERTEX_SHADER && shaderType !== gl.FRAGMENT_SHADER) {
+        } else {
             throw ("*** Error: unknown shader type");
         }
+    } else {
+        shaderType = opt_shaderType;
     }
 
     return loadShader(
