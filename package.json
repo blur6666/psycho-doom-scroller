@@ -3,7 +3,8 @@
   "scripts": {
     "build": "node build.js",
     "start": "npm run build && node server.js",
-    "test": "npm run build && jest"
+    "test": "npm run build && jest",
+    "watch": "npm-watch start"
   },
   "version": "1.0.0",
   "description": "Minimal WebGL + GLSL shader demo",
@@ -20,6 +21,16 @@
     "eslint": "^9.32.0",
     "globals": "^16.3.0",
     "jest": "^30.0.5",
+    "npm-watch": "^0.13.0",
     "supertest": "^7.1.4"
+  },
+  "watch": {
+    "start": {
+      "patterns": ["."],  
+      "extensions": "js,html,glsl,frag",
+      "verbose": true,
+      "ignore": ["node_modules", "dist" ],
+      "delay": 1000
+    }
   }
 }

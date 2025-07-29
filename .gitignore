@@ -6,8 +6,4 @@ Thumbs.db
 *.log
 node_modules/
 *.tmp
-.ignore/best_shaders.txt
-.ignore/infinite_kaleidoscope.frag
-.ignore/kaleidoscope_dimensions.frag
-.ignore/kaleidoscope_garden.frag
-.ignore/shader_16_kaleidoscope.glsl
+.ignore/
