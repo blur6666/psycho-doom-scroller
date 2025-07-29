@@ -1,17 +1,36 @@
-body, html {
-    height: 100vh;
+* {
     margin: 0 !important;
-    padding: 0;
-    overflow: hidden;
-    background-color: #000;
-    font-family: 'Inter', sans-serif;
+    padding: 0 !important;
+    box-sizing: border-box !important;
 }
+
+body, html {
+    height: 100vh !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background-color: #000 !important;
+    font-family: 'Inter', sans-serif;
+    border: none !important;
+    outline: none !important;
+    background: black;
+}
+
+
 canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    display: block;
-    width: 100vw;
-    height: 100vh;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 1 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    background-color: #000 !important;
 }

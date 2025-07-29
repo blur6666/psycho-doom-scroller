@@ -1,7 +1,5 @@
-// Minimal working WebGL implementation - no dependencies, no imports
 let canvas, gl, program, animationFrameId;
 
-// Shader compilation functions
 function createShader(gl, source, type) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -112,10 +110,15 @@ document.addEventListener('DOMContentLoaded', function() {
         gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
     }
     
-    // Set canvas size
-    canvas.width = 500;
-    canvas.height = 500;
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    // Set canvas to fullscreen
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
     
     // Get uniform locations
     const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
