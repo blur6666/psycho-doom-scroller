@@ -1,36 +1,33 @@
-* {
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
+/* CSS Reset */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body, html {
-    height: 100vh !important;
-    width: 100vw !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    background-color: #000 !important;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: #000;
     font-family: 'Inter', sans-serif;
-    border: none !important;
-    outline: none !important;
-    background: black;
+    border: none;
+    outline: none;
+    margin-block-end: 0;
 }
 
 
 canvas {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    z-index: 1 !important;
-    display: block !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    outline: none !important;
-    background-color: #000 !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    outline: none;
+    background-color: #000;
 }
