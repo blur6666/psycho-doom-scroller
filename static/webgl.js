@@ -3,7 +3,7 @@ import webglUtils from './webgl-utils.js';
 let canvas, gl, vsSource, fsSource, program, currentIndex, manifest, animationFrameId;
 
 (async function init() {
-        canvas = document.getElementById('glsl-canvas');
+    canvas = document.getElementById('glsl-canvas');
     gl = canvas.getContext("webgl2");
     if (!gl)
         console.error("failed to load canvas or webgl2");
@@ -12,7 +12,8 @@ let canvas, gl, vsSource, fsSource, program, currentIndex, manifest, animationFr
     currentIndex = 0;
     manifest = await webglUtils.fetchShaderManifest();
     vsSource = document.getElementById('vertex-shader').textContent;   // Vertex shader source from static HTML
-    fsSource = await webglUtils.fetchShaderSource('fragment.glsl');               // default startup shader
+    fsSource = document.getElementById('fragment-shader').textContent;
+    //fsSource = await webglUtils.fetchShaderSource('fragment.glsl');               // default startup shader
     
     // Remove any previous fragment shader script tag
     const oldFrag = document.getElementById('fragment-shader');
@@ -27,38 +28,42 @@ let canvas, gl, vsSource, fsSource, program, currentIndex, manifest, animationFr
     // START THIS SHIT
     program = webglUtils.createProgramFromScripts(gl, ['vertex-shader', 'fragment-shader']);
     gl.useProgram(program);
-    // webglUtils.initBuffer(gl, program, animationFrameId);
-
-    // window.addEventListener('resize', webglUtils.resizeCanvasToDisplaySize);
-
-
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-
-    gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array([0.0, 0.8,-0.8, -0.8, 0.8, -0.8]),
-        gl.STATIC_DRAW);
-
-    const vertexCoord = gl.getAttribLocation(program, "vertexCoord");
-    gl.vertexAttribPointer(vertexCoord, 2, gl.FLOAT, false, 0, 0);
 
     
+    // Set up a simple buffer for a fullscreen quad
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    const positions = [
+        -1.0, -1.0,
+         1.0, -1.0,
+        -1.0,  1.0,
+         1.0,  1.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    const positionLocation = gl.getAttribLocation(program, "aVertexPosition");
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    webglUtils.resizeCanvasToDisplaySize(canvas);
+    render();
+    
     function render(time) {
-        time *= 0.001;
-        webglUtils.resizeCanvasToDisplaySize(canvas); 
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-
-        gl.clearColor(1.0, 1.0 ,1.0, 1.0);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.useProgram(program);
-
-
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+        if (resolutionLocation) {
+            gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+        }
+        const timeLocation = gl.getUniformLocation(program, "u_time");
+        if (timeLocation) {
+            gl.uniform1f(timeLocation, (time || performance.now()) / 1000.0);
+        }
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(render);
     }
-    render();
 })();
 
 

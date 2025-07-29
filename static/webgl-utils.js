@@ -249,30 +249,7 @@ async function fetchShaderSource(id) {
     return await res.text();
 }
 
-function initBuffer(gl, shaderProgram, animationFrameId) {
-    gl.useProgram(shaderProgram);
-
-    // Set up a simple buffer for a fullscreen quad
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    const positions = [
-          0.0,  0.8,
-         -0.8, -0.8,
-          0.8, -0.8,
-    ];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-    const positionLocation = gl.getAttribLocation(shaderProgram, "a_position");
-    console.log(positionLocation);
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    // Cancel previous animation frame if any
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-}
-
-export default {
-    initBuffer: initBuffer,  
+export default { 
     fetchShaderSource: fetchShaderSource, 
     fetchShaderManifest: fetchShaderManifest,
     createProgramFromScripts: createProgramFromScripts,

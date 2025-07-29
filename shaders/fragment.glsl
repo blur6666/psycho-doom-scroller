@@ -2,7 +2,7 @@
 precision highp float;
 
 uniform vec2 u_resolution;
-// uniform float u_time;
+uniform float u_time;
 out vec4 outColor;
 
 vec3 palette(float t) {
@@ -15,7 +15,6 @@ vec3 palette(float t) {
 }
 
 void main() {
-    float u_time = 1.0;
     // Aspect-corrected UVs: maintain content aspect ratio
     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
     uv = uv * 2.0 - 1.0;

@@ -29,7 +29,7 @@
       "patterns": ["."],  
       "extensions": "js,html,glsl,frag",
       "verbose": true,
-      "ignore": ["node_modules", "dist" ],
+      "ignore": ["node_modules", "dist*" ],
       "delay": 1000
     }
   }
