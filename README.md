@@ -1,3 +1,3 @@
-run # Psychodoom scroller
+# Psycho-Doom-Scroller
 
-A minimal WebGL + GLSL shader demo. See `build.js` for build instructions.
+A WebGL-based psychedelic doom scrolling experience. See `build.js` for build instructions.

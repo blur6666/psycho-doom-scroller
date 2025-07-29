@@ -1,5 +1,5 @@
 {
-  "name": "glsl_hello_world",
+  "name": "psycho-doom-scroller",
   "scripts": {
     "build": "node build.js",
     "start": "npm run build && node server.js",
@@ -7,7 +7,7 @@
     "watch": "npm-watch start"
   },
   "version": "1.0.0",
-  "description": "Minimal WebGL + GLSL shader demo",
+  "description": "A WebGL-based psychedelic doom scrolling experience",
   "main": "build.js",
   "dependencies": {
     "express": "^4.18.2"
