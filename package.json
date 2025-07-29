@@ -1,14 +1,25 @@
 {
   "name": "glsl_hello_world",
+  "scripts": {
+    "build": "node build.js",
+    "start": "npm run build && node server.js",
+    "test": "npm run build && jest"
+  },
   "version": "1.0.0",
   "description": "Minimal WebGL + GLSL shader demo",
   "main": "build.js",
-  "scripts": {
-    "build": "node build.js",
-    "start": "npm run build && node server.js"
-  },
   "dependencies": {
     "express": "^4.18.2"
   },
-  "notes": "For local development, run: npm start and open http://localhost:8080/ in your browser."
+  "notes": "For local development, run: npm start and open http://localhost:8080/ in your browser.",
+  "devDependencies": {
+    "@eslint/css": "^0.10.0",
+    "@eslint/js": "^9.32.0",
+    "@eslint/json": "^0.13.1",
+    "@eslint/markdown": "^7.1.0",
+    "eslint": "^9.32.0",
+    "globals": "^16.3.0",
+    "jest": "^30.0.5",
+    "supertest": "^7.1.4"
+  }
 }

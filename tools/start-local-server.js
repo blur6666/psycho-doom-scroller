@@ -1,4 +1,6 @@
-// Simple HTTP server to serve files locally and avoid CORS issues
+/* eslint-env node */
+/* global __dirname */
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
