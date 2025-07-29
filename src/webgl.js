@@ -9,6 +9,11 @@ let enableToasts = false;
 let currentShaderIndex = 0;
 let shaderManifest = [];
 let isLoading = false;
+let preloadCount = 2; // Number of upcoming shaders to preload (default: 2)
+
+// Shader compilation queue system
+let shaderCompilationQueue = []; // Queue of shader indices to compile
+let isProcessingQueue = false;   // Flag to track if we're currently processing the queue
 
 // Transition state management
 let isTransitioning = false;
@@ -139,8 +144,28 @@ function showLoading(show) {
 }
 
 /**
- * Fetches the shader manifest from the API
- * @returns {Promise<Array>} - Promise resolving to shader manifest
+ * Shuffles an array using the Fisher-Yates algorithm
+ * @param {Array} array - The array to shuffle
+ * @returns {Array} - The shuffled array
+ */
+function shuffleArray(array) {
+    // Create a copy of the array to avoid modifying the original
+    const shuffled = [...array];
+    
+    // Fisher-Yates shuffle algorithm
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        // Random index from 0 to i
+        const j = Math.floor(Math.random() * (i + 1));
+        // Swap elements
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    return shuffled;
+}
+
+/**
+ * Fetches the shader manifest from the API and shuffles it
+ * @returns {Promise<Array>} - Promise resolving to shuffled shader manifest
  */
 async function fetchShaderManifest() {
     showLoading(true);
@@ -151,7 +176,12 @@ async function fetchShaderManifest() {
         }
         const manifest = await response.json();
         console.log(`Loaded shader manifest with ${manifest.length} shaders`);
-        return manifest;
+        
+        // Shuffle the manifest for random shader order
+        const shuffledManifest = shuffleArray(manifest);
+        console.log('Shader manifest shuffled for random navigation order');
+        
+        return shuffledManifest;
     } catch (error) {
         console.error('Error fetching shader manifest:', error);
         return [];
@@ -578,30 +608,110 @@ function completeTransition(force = false) {
     
     console.log(`Transition complete to shader index: ${currentShaderIndex}`);
     
-    // Preload the next shader after a successful transition
-    setTimeout(preloadNextShader, 100);
+    // Add just the next shader to the compilation queue after a transition
+    // This prevents performance stutters by distributing compilation across frames
+    setTimeout(() => {
+        // Calculate the next index after the current shader
+        const nextToCompileIndex = (currentShaderIndex + 1) % shaderManifest.length;
+        
+        // Only queue if not already in queue and not the current shader
+        if (!shaderCompilationQueue.includes(nextToCompileIndex) &&
+            nextToCompileIndex !== currentShaderIndex) {
+            console.log(`Adding next shader (index ${nextToCompileIndex}) to compilation queue after transition`);
+            shaderCompilationQueue.push(nextToCompileIndex);
+            
+            // Start processing the queue if not already processing
+            if (!isProcessingQueue) {
+                processShaderQueue();
+            }
+        }
+    }, 100);
 }
 
 /**
- * Preloads the next shader in sequence
- * This helps ensure instant transitions when the user navigates
+ * Adds shader indices to the compilation queue
+ * @param {number} startIndex - The starting index to queue from
+ * @param {number} count - Number of shaders to add to the queue
  */
-async function preloadNextShader() {
+function queueShadersForCompilation(startIndex, count) {
+    if (shaderManifest.length <= 1) {
+        return; // Nothing to queue with 0 or 1 shaders
+    }
+    
+    // Limit count to reasonable values
+    const actualCount = Math.min(count, shaderManifest.length - 1);
+    
+    console.log(`Adding ${actualCount} shaders to compilation queue...`);
+    
+    // Add each of the next N shaders to the queue
+    for (let i = 0; i < actualCount; i++) {
+        // Calculate the index with wraparound
+        const nextIndex = (startIndex + i + 1) % shaderManifest.length;
+        
+        // Skip if we've wrapped around back to current index
+        if (nextIndex === currentShaderIndex) continue;
+        
+        // Skip if already in queue
+        if (shaderCompilationQueue.includes(nextIndex)) continue;
+        
+        // Add to queue
+        shaderCompilationQueue.push(nextIndex);
+        console.log(`Added shader index ${nextIndex} to compilation queue`);
+    }
+    
+    // Start processing the queue if not already processing
+    if (!isProcessingQueue) {
+        processShaderQueue();
+    }
+}
+
+/**
+ * Processes one shader from the compilation queue
+ * This distributes the compilation workload across frames
+ */
+async function processShaderQueue() {
+    // If queue is empty or already processing, exit
+    if (shaderCompilationQueue.length === 0 || isLoading || isTransitioning) {
+        isProcessingQueue = false;
+        return;
+    }
+    
+    isProcessingQueue = true;
+    
+    // Get the next shader index from the queue
+    const nextIndex = shaderCompilationQueue.shift();
+    
+    console.log(`Processing shader ${nextIndex} from compilation queue (${shaderCompilationQueue.length} remaining)`);
+    
+    try {
+        // Compile just this one shader
+        await loadShaderByIndex(nextIndex, true);
+        console.log(`Successfully compiled shader ${nextIndex}`);
+    } catch (error) {
+        console.warn(`Failed to compile shader ${nextIndex}:`, error);
+    }
+    
+    // Wait a small delay before processing the next item
+    // This gives the browser time to handle user interactions
+    if (shaderCompilationQueue.length > 0) {
+        setTimeout(processShaderQueue, 100);
+    } else {
+        console.log("Shader compilation queue is now empty");
+        isProcessingQueue = false;
+    }
+}
+
+/**
+ * Preloads the next N shaders by adding them to the compilation queue
+ * @param {number} count - Optional number of shaders to preload, defaults to preloadCount
+ */
+function preloadNextShader(count = preloadCount) {
     if (isLoading || isTransitioning || shaderManifest.length <= 1) {
         return;
     }
     
-    // Calculate the next index (with wraparound)
-    const nextIndex = (currentShaderIndex + 1) % shaderManifest.length;
-    
-    // We don't actually need to store the result, just compile it
-    // It will be cached by the browser for future use
-    try {
-        console.log(`Preloading next shader (index ${nextIndex})`);
-        await loadShaderByIndex(nextIndex, true);
-    } catch (error) {
-        console.warn(`Failed to preload shader ${nextIndex}:`, error);
-    }
+    // Add the next N shaders to the compilation queue
+    queueShadersForCompilation(currentShaderIndex, count);
 }
 
 /**
@@ -849,11 +959,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             gl.useProgram(program);
             setupVertexBuffer(program);
         } else {
-            // Load first shader from manifest
-            await loadShaderByIndex(0);
+            // Select a random shader as the first shader
+            const randomInitialIndex = Math.floor(Math.random() * shaderManifest.length);
+            console.log(`Starting with random shader index: ${randomInitialIndex}`);
             
-            // Preload the next shader
-            setTimeout(preloadNextShader, 500);
+            // Load the randomly selected first shader
+            await loadShaderByIndex(randomInitialIndex);
+            
+            // Queue the next N shaders for precompilation to create an initial buffer
+            // This will process them one by one, avoiding frame rate drops
+            console.log(`Initializing compilation queue with next ${preloadCount} shaders`);
+            setTimeout(() => queueShadersForCompilation(randomInitialIndex, preloadCount), 500);
         }
     } catch (error) {
         console.error('Failed to initialize shader system:', error);
