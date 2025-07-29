@@ -12,7 +12,7 @@
   "dependencies": {
     "express": "^4.18.2"
   },
-  "notes": "For local development, run: npm start and open http://localhost:8080/ in your browser.",
+  "notes": "For local development, run: npm start and open http://localhost:3000/ in your browser.",
   "devDependencies": {
     "@eslint/css": "^0.10.0",
     "@eslint/js": "^9.32.0",

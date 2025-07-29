@@ -18,6 +18,7 @@ let prevProgram = null;       // previous shader program during transition
 let nextProgram = null;       // next shader program during transition
 let transitionProgress = 0;   // 0.0 to 1.0
 let targetShaderIndex = 0;    // target shader index for the current transition
+let transitionStyle = 'fade'; // transition style: 'fade' = transparency-based transition
 
 // Cache for uniform locations to avoid redundant lookups
 let uniformLocations = {
@@ -479,6 +480,26 @@ async function transitionToPrevShader() {
 }
 
 /**
+ * Transitions to a random shader
+ * @returns {Promise<boolean>} - Whether transition was started successfully
+ */
+async function transitionToRandomShader() {
+    // Don't start a new transition if one is already in progress or we're loading
+    if (isTransitioning || isLoading) {
+        return false;
+    }
+    
+    // Make sure we don't select the current shader
+    let randomIndex;
+    do {
+        randomIndex = Math.floor(Math.random() * shaderManifest.length);
+    } while (randomIndex === currentShaderIndex && shaderManifest.length > 1);
+    
+    // Use the fade transition style for random transitions
+    return startTransition(randomIndex, 1);
+}
+
+/**
  * Starts a transition to the specified shader index
  * @param {number} targetIndex - Target shader index
  * @param {number} direction - Direction of transition (1 = next, -1 = previous)
@@ -660,6 +681,9 @@ function setupNavigationHandlers() {
     let navigationCooldown = 500; // ms between navigation events
     const isMobile = isMobileDevice();
     
+    // Set the default transition style to fade
+    transitionStyle = 'fade';
+    
     // Adjust navigation settings based on platform
     if (isMobile) {
         navigationCooldown = 600; // Slightly longer cooldown on mobile for better touch precision
@@ -668,7 +692,7 @@ function setupNavigationHandlers() {
     }
     
     // Throttle function to prevent too many navigation events
-    function throttleNavigation(direction) {
+    function throttleNavigation() {
         const now = performance.now();
         
         // If we're already transitioning, either ignore the event or force completion
@@ -695,61 +719,37 @@ function setupNavigationHandlers() {
         
         lastNavigationTime = now;
         
-        // TEMPORARY: Only allow transitions to the next shader
-        // Ignore any requests to go to the previous shader
-        if (direction > 0) {
-            // Direction text for internal reference
-            const directionText = "next/down";
+        // Use random transition with the fade effect
+        const transitionStarted = transitionToRandomShader();
+        
+        if (transitionStarted) {
+            console.log(`Started transition to random shader with fade effect`);
             
-            // Transition to the next shader
-            const transitionStarted = transitionToNextShader();
+            // Set a safety timeout to ensure transitions always complete
+            setTimeout(() => {
+                if (isTransitioning) {
+                    console.log("Safety timeout: forcing transition completion");
+                    completeTransition(true);
+                }
+            }, transitionDuration + 50); // Add slight buffer to normal duration
             
-            if (transitionStarted) {
-                console.log(`Started transition to next shader (${directionText})`);
-                
-                // Set a safety timeout to ensure transitions always complete
-                setTimeout(() => {
-                    if (isTransitioning) {
-                        console.log("Safety timeout: forcing transition completion");
-                        completeTransition(true);
-                    }
-                }, transitionDuration + 50); // Add slight buffer to normal duration
-                
-                return true;
-            } else {
-                console.log("Failed to start transition");
-                return false;
-            }
+            return true;
         } else {
-            // Inform the user that transitions to previous shader are temporarily disabled
-            console.log("Transitions to previous shader temporarily disabled");
-            showNotification("Previous shader navigation temporarily disabled", "info", 1500);
+            console.log("Failed to start transition");
             return false;
         }
     }
     
-    // 1. Mouse wheel (scroll) navigation - optimized for desktop
+    // 1. Mouse wheel (scroll) navigation - triggers random transition
     document.addEventListener('wheel', function(event) {
         // Prevent default scrolling
         event.preventDefault();
         
-        // More sensitive wheel handling with normalization
-        const wheelDelta = Math.abs(event.deltaY);
-        
-        // In standard wheel events, positive deltaY means scrolling down
-        // But for our app, we want scrolling down to show the next shader down
-        // So we need to invert the direction
-        const direction = event.deltaY > 0 ? -1 : 1;
-        
-        // Apply different thresholds based on device
-        if (!isMobile && wheelDelta < 10) {
-            return; // Ignore very small movements on desktop (for precision mice)
-        }
-        
-        throttleNavigation(direction);
+        // Trigger transition regardless of scroll direction
+        throttleNavigation();
     }, { passive: false });
     
-    // 2. Touch (swipe) navigation - optimized for mobile
+    // 2. Touch events - any touch triggers transition
     document.addEventListener('touchstart', function(event) {
         touchStartY = event.touches[0].clientY;
         touchStartX = event.touches[0].clientX;
@@ -761,69 +761,26 @@ function setupNavigationHandlers() {
     }, { passive: false });
     
     document.addEventListener('touchend', function(event) {
-        if (event.changedTouches.length === 0) return;
-        
-        const touchEndY = event.changedTouches[0].clientY;
-        const touchEndX = event.changedTouches[0].clientX;
-        
-        // Calculate vertical and horizontal distance moved
-        const deltaY = touchEndY - touchStartY;
-        const deltaX = touchEndX - touchStartX;
-        
-        // Adjust sensitivity based on device
-        const swipeThreshold = isMobile ? 40 : 50; // Lower threshold for mobile
-        
-        // Only trigger if vertical movement is more than horizontal
-        // and more than threshold to avoid small accidental swipes
-        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > swipeThreshold) {
-            // Determine direction for swipe
-            // Swiping down (positive deltaY) should show the next shader
-            const direction = deltaY > 0 ? 1 : -1;
-            throttleNavigation(direction);
-        }
+        // Any touch end will trigger transition
+        throttleNavigation();
     }, { passive: true });
     
-    // 3. Keyboard navigation - enhanced for desktop
+    // 3. Keyboard navigation - any key triggers transition
     document.addEventListener('keydown', function(event) {
-        // Extended keyboard support
-        switch (event.key) {
-            case 'ArrowDown':
-            case 'PageDown':
-            case ' ':
-            case 'j':
-            case 's':
-                throttleNavigation(1); // Move visually downward (next shader)
-                event.preventDefault();
-                break;
-                
-            case 'ArrowUp':
-            case 'PageUp':
-            case 'k':
-            case 'w':
-                throttleNavigation(-1); // Move visually upward (previous shader)
-                event.preventDefault();
-                break;
-                
-            case 'f':
-                // Toggle fullscreen
-                toggleFullscreen();
-                event.preventDefault();
-                break;
+        // Toggle fullscreen with F key specifically
+        if (event.key === 'f') {
+            toggleFullscreen();
+        } else {
+            // Any other key triggers transition
+            throttleNavigation();
         }
+        event.preventDefault();
     });
     
-    // 4. Mouse click navigation
+    // 4. Mouse click navigation - any click triggers transition
     document.addEventListener('click', function(event) {
-        // Determine direction based on click position
-        // Click top half to move upward (previous shader)
-        // Click bottom half to move downward (next shader)
-        const clickPosition = event.clientY / window.innerHeight;
-        
-        if (clickPosition < 0.5) {
-            throttleNavigation(-1); // Move visually upward (previous shader)
-        } else {
-            throttleNavigation(1);  // Move visually downward (next shader)
-        }
+        // Any click triggers transition regardless of position
+        throttleNavigation();
     });
     
     // 5. Double tap for fullscreen on mobile
@@ -843,7 +800,7 @@ function setupNavigationHandlers() {
         lastTap = currentTime;
     });
     
-    console.log(`Navigation handlers set up for ${isMobile ? 'mobile' : 'desktop'} platform`);
+    console.log(`Navigation handlers set up for ${isMobile ? 'mobile' : 'desktop'} platform with fade transition style`);
 }
 
 // Initialize WebGL application
@@ -1097,97 +1054,152 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (transitionDirection > 0) {
                 // Transitioning to next shader (slide up)
                 
-                // Draw previous shader (full screen, but will fade out at top)
-                gl.useProgram(prevProgram);
-                setStandardUniforms(prevProgram, time);
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                
-                // Set up fade mask for transition area
-                // This draws a rectangle with transparent to opaque gradient
-                gl.enable(gl.SCISSOR_TEST);
-                
-                // Scissor zone covers the entire height
-                // Draw fewer strips for a faster, more immediate transition
-                const strips = 12; // Reduced number of strips for snappier gradient
-                
-                for (let i = 0; i < strips; i++) {
-                    // Calculate the position and height of this strip
-                    const stripHeight = overlapHeight / strips;
-                    const stripY = Math.max(0, dividerPos - overlapHeight) + (i * stripHeight);
-                    
-                    // Calculate opacity for this strip (0.0 to 1.0)
-                    const opacity = i / (strips - 1);
-                    
-                    // Set scissor to only draw in this thin horizontal strip
-                    gl.scissor(0, stripY, canvas.width, stripHeight);
-                    
-                    // Set the blend factor based on the strip's position
-                    gl.blendColor(0, 0, 0, opacity);
-                    gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
-                    
-                    // Draw next shader in this strip with calculated opacity
-                    gl.useProgram(nextProgram);
-                    setStandardUniforms(nextProgram, time);
-                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                }
-                
-                // Now draw the fully opaque portion of the next shader
-                // Reset blend mode
-                gl.blendFunc(gl.ONE, gl.ZERO);
-                
-                // Set scissor to only draw in the top portion (fully opaque)
-                const fullyVisibleHeight = Math.max(0, dividerPos);
-                gl.scissor(0, dividerPos, canvas.width, canvas.height - fullyVisibleHeight);
-                
-                // Draw next shader fully opaque in this region
-                gl.useProgram(nextProgram);
-                setStandardUniforms(nextProgram, time);
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    if (transitionStyle === 'fade') {
+                        // Draw next shader first (fully opaque)
+                        gl.useProgram(nextProgram);
+                        setStandardUniforms(nextProgram, time);
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                        
+                        // Enable blending for transparency effect
+                        gl.enable(gl.BLEND);
+                        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                        
+                        // Calculate opacity based on transition progress (fade out)
+                        const opacity = 1.0 - transitionProgress;
+                        
+                        // Set the blend color to control opacity
+                        gl.blendColor(0, 0, 0, opacity);
+                        gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+                        
+                        // Draw previous shader with calculated opacity
+                        gl.useProgram(prevProgram);
+                        setStandardUniforms(prevProgram, time);
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                        
+                        // Reset blend mode
+                        gl.blendFunc(gl.ONE, gl.ZERO);
+                    } else {
+                        // Original slide transition effect
+                        // Draw previous shader (full screen, but will fade out at top)
+                        gl.useProgram(prevProgram);
+                        setStandardUniforms(prevProgram, time);
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                        
+                        // Set up fade mask for transition area
+                        // This draws a rectangle with transparent to opaque gradient
+                        gl.enable(gl.SCISSOR_TEST);
+                        
+                        // Scissor zone covers the entire height
+                        // Draw fewer strips for a faster, more immediate transition
+                        const strips = 12; // Reduced number of strips for snappier gradient
+                        
+                        for (let i = 0; i < strips; i++) {
+                            // Calculate the position and height of this strip
+                            const stripHeight = overlapHeight / strips;
+                            const stripY = Math.max(0, dividerPos - overlapHeight) + (i * stripHeight);
+                            
+                            // Calculate opacity for this strip (0.0 to 1.0)
+                            const opacity = i / (strips - 1);
+                            
+                            // Set scissor to only draw in this thin horizontal strip
+                            gl.scissor(0, stripY, canvas.width, stripHeight);
+                            
+                            // Set the blend factor based on the strip's position
+                            gl.blendColor(0, 0, 0, opacity);
+                            gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+                            
+                            // Draw next shader in this strip with calculated opacity
+                            gl.useProgram(nextProgram);
+                            setStandardUniforms(nextProgram, time);
+                            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                        }
+                        
+                        // Now draw the fully opaque portion of the next shader
+                        // Reset blend mode
+                        gl.blendFunc(gl.ONE, gl.ZERO);
+                        
+                        // Set scissor to only draw in the top portion (fully opaque)
+                        const fullyVisibleHeight = Math.max(0, dividerPos);
+                        gl.scissor(0, dividerPos, canvas.width, canvas.height - fullyVisibleHeight);
+                        
+                        // Draw next shader fully opaque in this region
+                        gl.useProgram(nextProgram);
+                        setStandardUniforms(nextProgram, time);
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    }
             } else {
-                // Transitioning to previous shader (slide down)
-                
-                // Draw current shader (full screen, but will fade out at bottom)
-                gl.useProgram(prevProgram);
-                setStandardUniforms(prevProgram, time);
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                
-                // Set up fade mask for transition area
-                gl.enable(gl.SCISSOR_TEST);
-                
-                // Draw fewer strips with decreasing opacity for snappier transitions
-                const strips = 12;
-                
-                for (let i = 0; i < strips; i++) {
-                    // Calculate the position and height of this strip
-                    const stripHeight = overlapHeight / strips;
-                    const stripY = Math.min(canvas.height - overlapHeight, dividerPos) + (i * stripHeight);
+                if (transitionStyle === 'fade') {
+                    // Use the same fade transition for previous shaders too
+                    // Draw next shader first (fully opaque)
+                    gl.useProgram(nextProgram);
+                    setStandardUniforms(nextProgram, time);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                     
-                    // Calculate opacity for this strip (1.0 to 0.0)
-                    const opacity = 1.0 - (i / (strips - 1));
+                    // Enable blending for transparency effect
+                    gl.enable(gl.BLEND);
+                    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
                     
-                    // Set scissor to only draw in this thin horizontal strip
-                    gl.scissor(0, stripY, canvas.width, stripHeight);
+                    // Calculate opacity based on transition progress (fade out)
+                    const opacity = 1.0 - transitionProgress;
                     
-                    // Set the blend factor based on the strip's position
+                    // Set the blend color to control opacity
                     gl.blendColor(0, 0, 0, opacity);
                     gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
                     
-                    // Draw next shader in this strip with calculated opacity
+                    // Draw previous shader with calculated opacity
+                    gl.useProgram(prevProgram);
+                    setStandardUniforms(prevProgram, time);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    
+                    // Reset blend mode
+                    gl.blendFunc(gl.ONE, gl.ZERO);
+                } else {
+                    // Original slide transition effect
+                    // Transitioning to previous shader (slide down)
+                    
+                    // Draw current shader (full screen, but will fade out at bottom)
+                    gl.useProgram(prevProgram);
+                    setStandardUniforms(prevProgram, time);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    
+                    // Set up fade mask for transition area
+                    gl.enable(gl.SCISSOR_TEST);
+                    
+                    // Draw fewer strips with decreasing opacity for snappier transitions
+                    const strips = 12;
+                    
+                    for (let i = 0; i < strips; i++) {
+                        // Calculate the position and height of this strip
+                        const stripHeight = overlapHeight / strips;
+                        const stripY = Math.min(canvas.height - overlapHeight, dividerPos) + (i * stripHeight);
+                        
+                        // Calculate opacity for this strip (1.0 to 0.0)
+                        const opacity = 1.0 - (i / (strips - 1));
+                        
+                        // Set scissor to only draw in this thin horizontal strip
+                        gl.scissor(0, stripY, canvas.width, stripHeight);
+                        
+                        // Set the blend factor based on the strip's position
+                        gl.blendColor(0, 0, 0, opacity);
+                        gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+                        
+                        // Draw next shader in this strip with calculated opacity
+                        gl.useProgram(nextProgram);
+                        setStandardUniforms(nextProgram, time);
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    }
+                    
+                    // Now draw the fully opaque portion of the next shader
+                    gl.blendFunc(gl.ONE, gl.ZERO);
+                    
+                    // Set scissor to only draw in the bottom portion (fully opaque)
+                    gl.scissor(0, 0, canvas.width, Math.min(canvas.height, dividerPos));
+                    
+                    // Draw next shader fully opaque in this region
                     gl.useProgram(nextProgram);
                     setStandardUniforms(nextProgram, time);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                 }
-                
-                // Now draw the fully opaque portion of the next shader
-                gl.blendFunc(gl.ONE, gl.ZERO);
-                
-                // Set scissor to only draw in the bottom portion (fully opaque)
-                gl.scissor(0, 0, canvas.width, Math.min(canvas.height, dividerPos));
-                
-                // Draw next shader fully opaque in this region
-                gl.useProgram(nextProgram);
-                setStandardUniforms(nextProgram, time);
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
             
             // Disable scissor test and blending

@@ -20,9 +20,6 @@ const vertex = normalizeShader(safeRead('./shaders/default.vert'));
 const fragment = normalizeShader(safeRead('./shaders/default.frag'));
 const webgl = safeRead('./src/webgl.js');
 
-// Write normalized shaders to debug files for comparison
-fs.writeFileSync('./dist/vertex.normalized.glsl', vertex, 'utf8');
-fs.writeFileSync('./dist/fragment.normalized.glsl', fragment, 'utf8');
 
 let template;
 try {
@@ -41,4 +38,3 @@ fs.writeFileSync('./dist/index.html', template);
 fs.cpSync('./src', './dist/', { recursive: true });
 
 console.log('✅ HTML generated at: dist/index.html');
-
