@@ -136,20 +136,6 @@ function createCanvas() {
  */
 function showLoading(show) {
     isLoading = show;
-    
-    // Create loading indicator if it doesn't exist
-    let loadingIndicator = document.getElementById('loading-indicator');
-    if (!loadingIndicator && show) {
-        loadingIndicator = document.createElement('div');
-        loadingIndicator.id = 'loading-indicator';
-        loadingIndicator.className = 'loading-indicator';
-        loadingIndicator.textContent = 'Loading shader...';
-        document.body.appendChild(loadingIndicator);
-    }
-    
-    if (loadingIndicator) {
-        loadingIndicator.style.display = show ? 'block' : 'none';
-    }
 }
 
 /**
