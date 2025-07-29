@@ -10,6 +10,7 @@ let currentShaderIndex = 0;
 let shaderManifest = [];
 let isLoading = false;
 let preloadCount = 2; // Number of upcoming shaders to preload (default: 2)
+let shaderSourceCache = {}; // Cache for shader sources
 
 // Shader compilation queue system
 let shaderCompilationQueue = []; // Queue of shader indices to compile
@@ -212,6 +213,7 @@ async function fetchShaderSource(id) {
         showLoading(false);
     }
 }
+
 /**
  * Non-blocking version: fetches a shader source by ID using promise chaining.
  * @param {string} id - Shader ID from manifest
@@ -246,6 +248,38 @@ function fetchShaderSource(id) {
         .finally(() => {
             showLoading(false);
         });
+}
+
+/**
+ * Fetches all shader sources from the manifest and populates the cache.
+ */
+async function fetchAllShaderSources() {
+    if (!shaderManifest || shaderManifest.length === 0) {
+        return;
+    }
+    console.log('Fetching all shader sources...');
+    showLoading(true);
+    try {
+        const fetchPromises = shaderManifest.map(shaderInfo =>
+            fetch(`/api/shaders/${encodeURIComponent(shaderInfo.id)}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`Failed to fetch ${shaderInfo.id}`);
+                    }
+                    return res.text();
+                })
+                .then(source => {
+                    shaderSourceCache[shaderInfo.id] = source;
+                })
+        );
+        await Promise.all(fetchPromises);
+        console.log(`All ${shaderManifest.length} shader sources have been cached.`);
+    } catch (error) {
+        console.error('Error fetching all shader sources:', error);
+        showNotification('Could not load all shaders.', 'error');
+    } finally {
+        showLoading(false);
+    }
 }
 
 /**
@@ -421,12 +455,12 @@ function showNavigationHints() {
 }
 
 /**
- * Loads a shader by index from the manifest
+ * Loads a shader by index from the manifest by getting the source from the cache
  * @param {number} index - Index of shader in manifest
  * @param {boolean} forTransition - Whether this is for a transition (don't update current index)
- * @returns {Promise<WebGLProgram|null>} - Compiled shader program or null if failed
+ * @returns {WebGLProgram|null} - Compiled shader program or null if failed
  */
-async function loadShaderByIndex(index, forTransition = false) {
+function loadShaderByIndex(index, forTransition = false) {
     if (index < 0 || index >= shaderManifest.length) {
         showNotification(`Invalid shader index: ${index}`, 'error');
         return null;
@@ -440,12 +474,12 @@ async function loadShaderByIndex(index, forTransition = false) {
         // Get default vertex shader source
         const vsSource = document.getElementById('vertex-shader').textContent;
         
-        // Fetch fragment shader from API
+        // Get fragment shader from cache
         const shaderInfo = shaderManifest[index];
-        const fsSource = await fetchShaderSource(shaderInfo.id);
+        const fsSource = shaderSourceCache[shaderInfo.id];
         
         if (!fsSource) {
-            showNotification(`Failed to load shader: ${shaderInfo.name}`, 'error');
+            showNotification(`Shader source not found in cache: ${shaderInfo.name}`, 'error');
             return null;
         }
         
@@ -979,6 +1013,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load shader manifest
     try {
         shaderManifest = await fetchShaderManifest();
+        
+        if (shaderManifest.length > 0) {
+            await fetchAllShaderSources(); // Fetch all shader sources at initialization
+        }
         
         if (shaderManifest.length === 0) {
             console.error('No shaders found in manifest');
