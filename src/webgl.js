@@ -27,6 +27,10 @@ let transitionProgress = 0;   // 0.0 to 1.0
 let targetShaderIndex = 0;    // target shader index for the current transition
 let transitionStyle = 'fade'; // transition style: 'fade' = transparency-based transition
 
+// Inactivity timer state
+let inactivityTimer = null;
+const INACTIVITY_TIMEOUT = 10000; // 10 seconds
+
 // Cache for uniform locations to avoid redundant lookups
 let uniformLocations = {
     resolution: null,
@@ -695,6 +699,9 @@ function completeTransition(force = false) {
             }
         }
     }, 100);
+
+    // Reset the inactivity timer to start the countdown again after any transition
+    resetInactivityTimer();
 }
 
 /**
@@ -702,6 +709,22 @@ function completeTransition(force = false) {
  * @param {number} startIndex - The starting index to queue from
  * @param {number} count - Number of shaders to add to the queue
  */
+/**
+ * Resets the inactivity timer. If the timer expires, a random shader is loaded.
+ */
+function resetInactivityTimer() {
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+    inactivityTimer = setTimeout(() => {
+        console.log(`No interaction for ${INACTIVITY_TIMEOUT / 1000} seconds. Automatically changing shader.`);
+        // Ensure we don't start a new transition if one is already happening
+        if (!isTransitioning && !isLoading) {
+            transitionToRandomShader();
+        }
+    }, INACTIVITY_TIMEOUT);
+}
+
 function queueShadersForCompilation(startIndex, count) {
     if (shaderManifest.length <= 1) {
         return; // Nothing to queue with 0 or 1 shaders
@@ -1068,6 +1091,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Start the render loop
     console.log('Starting render loop');
     render();
+
+    // Start the initial inactivity timer
+    resetInactivityTimer();
     
     // Enhanced resize handler for fullscreen canvas
     function handleResize() {
