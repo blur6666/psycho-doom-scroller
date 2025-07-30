@@ -1,108 +1,179 @@
-# Psychodoom Scroller
+# WebGL Modular Application
 
-## Product Overview
-This application is an interactive, cross-platform (mobile and desktop browser only) experience for exploring a curated collection of beautiful GLSL shaders. Users can seamlessly scroll, swipe, or click through shaders, enjoying a visually immersive and distraction-free environment. The experience is designed to be fast, smooth, and intuitive, with minimal UI and instant shader transitions.
+A modular WebGL application for shader visualization with smooth transitions, user interaction, and performance optimization.
 
-## User Experience
-### General
-- The app launches directly into a fullscreen shader view.
-- The background is animated by the current shader, filling the entire screen.
-- The interface is minimal, with only essential overlays (such as a loading indicator).
-- The app is fully responsive and works on both mobile and desktop browsers.
+## Project Structure
 
-### Navigation
-- Users can scroll (mouse wheel), swipe (touch), use arrow keys, or mouse click to move to the next or previous shader.
-- Navigation is smooth, with slide transitions between shaders.
-- The next shader is preloaded for instant switching.
-- If a shader fails to load or compile, the app skips to the next one and displays an error message.
+The application follows a modular architecture with the following main components:
 
-### Mobile Experience
-- Touch gestures (swipe, tap) are optimized for one-handed use.
-- The app supports fullscreen mode and hides browser UI for immersion.
-- Performance is optimized for battery and memory.
+### Core Modules
 
-### Desktop Experience
-- The app is available only via browser (no desktop app or installable version).
-- Mouse wheel, mouse click, and keyboard navigation are supported.
-- The app resizes gracefully with the window.
-- Drag-and-drop support for loading custom shaders (optional).
+- **WebGLCore** (`src/modules/webgl-core.js`): Manages WebGL context, basic rendering operations, and core WebGL functionality.
+- **ShaderManager** (`src/modules/shader-manager.js`): Handles shader loading, compilation, and management of the shader library.
+- **Material** (`src/modules/material.js`): Abstracts shader uniforms and provides an interface for managing shader parameters.
+- **RenderingFacade** (`src/modules/rendering-facade.js`): Provides a simplified interface for rendering operations.
 
-## Software Behavior
-- On launch, the app fetches a manifest of available shaders from the backend.
-- The app loads and compiles the first shader, displaying it in the canvas.
-- As the user scrolls, swipes, clicks, or uses the keyboard, the app fetches, compiles, and displays the next/previous shader.
-- The backend ensures only valid, pre-compiled shaders are included in the manifest.
-- All navigation and UI actions are instant and non-blocking.
-- The app handles errors gracefully, never leaving the user stuck on a broken shader.
+### Extension Modules
 
-## Out of Scope
-- User accounts, comments, or social features (unless specified later).
-- Shader editing or live coding.
-- Backend admin UI (for now).
-- Shader library management is manual and performed by the project maintainer.
-- Music (audio playback or sound integration).
+- **TransitionEngine** (`src/modules/transition-engine.js`): Manages transitions between shaders with various effects and timing controls.
+- **EventHandler** (`src/modules/event-handler.js`): Handles user inputs (mouse, keyboard, touch) and navigation between shaders.
+- **UIController** (`src/modules/ui-controller.js`): Manages UI elements like notifications, navigation hints, and loading indicators.
+- **PerformanceOptimizer** (`src/modules/performance-optimizer.js`): Handles shader compilation queues, FPS monitoring, and performance optimizations.
 
-## Success Criteria
-- Users can scroll, swipe, or click through shaders with no visible lag.
-- The app works and looks great on both mobile and desktop browsers.
-- Only valid shaders are shown; errors are handled gracefully.
-- The experience is visually immersive and distraction-free.
+### Main Application
 
----
+- **Main Application** (`src/modules/index.js`): Initializes and coordinates all modules, providing a central integration point.
 
-## Architecture Overview
+## Getting Started
 
-### System Components
+### Prerequisites
 
-#### Frontend (Browser)
-- **WebGL Canvas**: Renders the current shader fullscreen.
-- **Navigation Handler**: Listens for scroll up/down, mouse click, and arrow key events to trigger shader changes.
-- **Shader Loader**: Fetches shader code from the backend and compiles it in the browser.
-- **Preloader**: Preloads the next shader in the background for instant switching.
-- **Loading Indicator**: Shows when a shader is being loaded/compiled.
-- **Error Handler**: Skips to the next shader if a load/compile error occurs.
+- Node.js (v14 or higher)
+- npm (v6 or higher)
 
-#### Backend (Node.js/Express)
-- **Manifest Endpoint**: Serves a JSON list of shaders (id, name).
-- **Shader Endpoint**: Serves the GLSL code for a given shader id.
-- **Static File Server**: Serves frontend assets and shaders.
-- **(Optional) Shader Validator**: Validates shaders before adding to manifest (can be manual for MVP).
+### Installation
 
-### Data Flow
-1. On load, frontend fetches the manifest from `/api/shaders/manifest`.
-2. Frontend loads and compiles the first shader.
-3. On scroll/click/arrow, frontend fetches and compiles the next/prev shader.
-4. Preloader fetches the next shader in advance.
-5. If a shader fails, error handler skips to the next.
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd webgl-modular-application
+   ```
 
-### Deployment
-- **Backend**: Node.js/Express server (serves API and static files).
-- **Frontend**: Static files built and served from `/dist`.
-- **No database**: All shader management is manual for MVP.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
----
+### Running the Application
 
-## Product Decisions
+To start the development server:
 
-### Shader Metadata
-- Only `id` and `name` are required for each shader. No additional metadata is needed for now.
+```bash
+npm run dev
+```
 
-### Shader Preloading
-- The app should be able to preload the next shader quickly, as users are expected to scroll every ~2 seconds. Preloading must be fast and reliable.
+This will build the application and start a local development server at http://localhost:3000.
 
-### Transition Animation
-- Only translation/scroll (slide) transitions will be implemented for shader changes. No fade or other effects in MVP.
+### Development Scripts
 
-### Gestures
-- Only two gestures are supported: scroll down (next shader) and scroll up (previous shader). This follows standard scrolling conventions for both mobile and desktop. No other gestures will be implemented in the MVP or foreseeable future.
+- **Build the application**:
+  ```bash
+  npm run build
+  ```
 
-### Runtime Shader Compilation Strategy
-- We will test runtime shader compilation with the current shader folder structure to determine viability
-- Keep current /shaders/ folder organization for MVP - mixed extensions (.frag/.glsl) and complex filenames are acceptable
-- Load shaders randomly from folder initially, without database or complex relationships
-- Performance analysis needed to determine if shaders need simplification or pre-processing
+- **Start the development server**:
+  ```bash
+  npm run start
+  ```
 
-### Error Handling Philosophy
-- No fallback shaders for compilation/compatibility errors - if it breaks, user gets nothing (expected behavior)
-- All target browsers implement WebGL, so compatibility should be default
-- Network failures should fail gracefully but no retry mechanisms needed for MVP
+- **Watch for changes and rebuild automatically**:
+  ```bash
+  npm run watch
+  ```
+
+- **Build and start the application**:
+  ```bash
+  npm run dev
+  ```
+
+## Testing
+
+The application includes comprehensive unit tests for all modules. Tests are located in the `src/modules/test/unit` directory.
+
+### Running Tests
+
+To run all tests:
+
+```bash
+npm test
+```
+
+This will execute all tests and generate a coverage report in the `coverage` directory.
+
+### Test Structure
+
+- `mock-webgl-context.js`: A comprehensive mock implementation of the WebGL context for unit testing without a browser environment.
+- Unit tests for individual modules:
+  - `transition-engine.test.js`: Tests for the TransitionEngine module
+  - `event-handler.test.js`: Tests for the EventHandler module
+  - `ui-controller.test.js`: Tests for the UIController module
+  - `performance-optimizer.test.js`: Tests for the PerformanceOptimizer module
+
+## Module Details
+
+### TransitionEngine
+
+The TransitionEngine module manages transitions between shaders with various effects:
+
+- Fade transitions between shaders
+- Slide transitions (horizontal)
+- Custom transition duration and easing functions
+- Event emission for transition lifecycle events
+
+```javascript
+// Example usage:
+transitionEngine.startTransition(targetShaderId, direction, {
+  duration: 1000,
+  defaultEffect: 'fade'
+});
+```
+
+### EventHandler
+
+The EventHandler module manages user interaction:
+
+- Keyboard navigation (arrow keys, page up/down)
+- Mouse wheel navigation
+- Touch gestures (swipe up/down)
+- Click navigation (left/right areas of the canvas)
+- Event throttling to prevent rapid transitions
+
+```javascript
+// Example setup:
+eventHandler.setupNavigationHandlers();
+eventHandler.setupResizeHandler();
+```
+
+### UIController
+
+The UIController module manages user interface elements:
+
+- Notification system with different types (info, success, error)
+- Navigation hints for first-time users
+- Loading indicators for shader compilation
+- Customizable styles and animations
+
+```javascript
+// Example usage:
+uiController.showNotification('Shader loaded successfully', 'success');
+uiController.showLoading(true, 'Compiling shader...');
+```
+
+### PerformanceOptimizer
+
+The PerformanceOptimizer module handles performance optimization:
+
+- Shader compilation queue management
+- FPS monitoring and quality adjustment
+- Battery status detection and optimization
+- Inactivity detection for power saving
+- Resource usage tracking
+
+```javascript
+// Example usage:
+performanceOptimizer.preloadShaders(2);
+performanceOptimizer.optimizeForBattery();
+```
+
+## Build System
+
+The project uses Rollup for bundling and includes:
+
+- ES module output format
+- Development builds with source maps
+- Minified production builds
+- Watch mode for development
+
+## License
+
+[MIT License](LICENSE)
