@@ -487,7 +487,7 @@ shaderManager.init();
 
 ### 4.1. Event-Driven Communication
 
-Modules will communicate through a publish-subscribe pattern. A central event emitter will be used to decouple modules. For example, if a shader fails to compile, the `ShaderManager` will emit a `SHADER_COMPILE_ERROR` event. The `UIController` will listen for this event and display a notification. This approach avoids direct dependencies between modules.
+Modules will communicate through a publish-subscribe pattern:
 
 ```mermaid
 graph TD
@@ -504,7 +504,7 @@ graph TD
 
 ### 4.2. State Management
 
-A centralized state management approach will be implemented. A single `appState` object will hold the application state. However, modules will not mutate this state directly. Instead, they will emit events that a central state manager (or reducer) will use to update the state. This ensures predictable state changes and makes debugging easier.
+Centralized state management will be implemented:
 
 ```javascript
 // Global state object
@@ -569,8 +569,6 @@ Each module will have dedicated unit tests covering:
 - Edge cases
 - State management
 
-We will use a mock WebGL context for testing `WebGLCore` to verify that it makes the correct WebGL calls without needing a full browser environment.
-
 ### 7.2. Integration Tests
 Integration tests will verify:
 - Module communication
@@ -585,8 +583,6 @@ The modular approach should maintain or improve performance:
 - Improved initialization time through parallel module loading
 - Better caching strategies
 - More efficient error handling
-
-We will add performance profiling hooks (e.g., `performance.now()`) to key operations in `WebGLCore` and `TransitionEngine` to monitor performance during development.
 
 ## 9. Security Considerations
 
@@ -608,22 +604,18 @@ We will add performance profiling hooks (e.g., `performance.now()`) to key opera
 3. Monitor performance and error rates
 4. Gradually phase out old implementation
 
-We will use an adapter/facade pattern to bridge the new modules with the old `webgl.js` file during the transition. This will allow us to migrate features incrementally.
-
 ## 11. Risks and Mitigations
 
 ### 11.1. Risks
 - Breaking existing functionality
 - Performance degradation
 - Increased complexity during transition period
-- WebGL state leakage between modules
 
 ### 11.2. Mitigations
 - Comprehensive testing
 - Feature flags for gradual rollout
 - Detailed monitoring and alerting
 - Rollback plan
-- A `WebGLStateTracker` will be implemented in `WebGLCore` to log state changes and warn about potential conflicts during development.
 
 ## 12. Success Metrics
 
@@ -632,11 +624,3 @@ We will use an adapter/facade pattern to bridge the new modules with the old `we
 - Maintained or improved performance
 - Reduced bug reports related to WebGL functionality
 - Faster development cycle for new features
-
-## 13. Future Extensibility
-
-The modular architecture is designed to support future features such as:
-- **Post-processing effects:** Can be implemented as new modules that plug into the render pipeline.
-- **Multiple render passes:** Can be managed by a `RenderPassManager` module.
-- **Scene graph:** Can be a separate `SceneGraph` module that interacts with `WebGLCore`.
-- **Material system:** A `Material` or `UniformBuffer` abstraction can be created to encapsulate shader programs and their uniforms, making it easier to manage shaders with different requirements.
