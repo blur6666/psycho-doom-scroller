@@ -10,7 +10,7 @@
   "description": "A WebGL-based psychedelic doom scrolling experience",
   "main": "src/build.js",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.22.1"
   },
   "notes": "For local development, run: npm start and open http://localhost:3000/ in your browser.",
   "devDependencies": {
